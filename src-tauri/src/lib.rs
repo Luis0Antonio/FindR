@@ -1,6 +1,7 @@
 mod commands;
 mod icon_protocol;
 mod macos;
+mod settings;
 
 pub fn run() {
     tauri::Builder::default()
@@ -23,6 +24,8 @@ pub fn run() {
             commands::quicklook_show,
             commands::quicklook_update,
             commands::quicklook_close,
+            settings::load_settings,
+            settings::save_settings,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

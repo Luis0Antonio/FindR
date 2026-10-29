@@ -25,12 +25,30 @@ export function toFsError(e: unknown): FsError {
   return { code: "io", message: String(e) };
 }
 
+export interface PaneSettings {
+  path: string;
+  sortKey: "name" | "modified" | "kind" | "size";
+  sortDir: "asc" | "desc";
+  foldersFirst: boolean;
+  itemSize: number;
+}
+
+export interface Settings {
+  favorites: string[];
+  splitEnabled: boolean;
+  splitRatio: number;
+  showHidden: boolean;
+  panes: Record<"left" | "right", PaneSettings>;
+}
+
 export const api = {
   listDir: (path: string, showHidden: boolean) => invoke<FileEntry[]>("list_dir", { path, showHidden }),
   openPath: (path: string) => invoke<void>("open_path", { path }),
   homeDir: () => invoke<string>("home_dir"),
   startupDir: () => invoke<string | null>("startup_dir"),
   openPrivacySettings: () => invoke<void>("open_privacy_settings"),
+  loadSettings: () => invoke<Settings | null>("load_settings"),
+  saveSettings: (settings: Settings) => invoke<void>("save_settings", { settings }),
   log: (msg: string) => invoke<void>("debug_log", { msg }),
 };
 

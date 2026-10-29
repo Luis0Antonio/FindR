@@ -1,16 +1,31 @@
 import { useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { FileEntry } from "../api";
-import type { PaneState } from "../state/panes";
+import { useApp, type PaneId, type PaneState, type SortKey } from "../state/panes";
 import { FileRow } from "./FileRow";
 
 export function rowHeight(itemSize: number) {
   return Math.max(22, itemSize + 6);
 }
 
-export function FileList({ pane, entries }: { pane: PaneState; entries: FileEntry[] }) {
+const COLUMNS: { key: SortKey; label: string; cls: string }[] = [
+  { key: "name", label: "Name", cls: "name" },
+  { key: "modified", label: "Date Modified", cls: "date" },
+  { key: "kind", label: "Kind", cls: "kind" },
+  { key: "size", label: "Size", cls: "size" },
+];
+
+function relativeFolder(root: string, path: string): string {
+  const dir = path.slice(0, path.lastIndexOf("/")) || "/";
+  if (dir === root) return ".";
+  const prefix = root === "/" ? "/" : root + "/";
+  return dir.startsWith(prefix) ? dir.slice(prefix.length) : dir;
+}
+
+export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; entries: FileEntry[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const height = rowHeight(pane.itemSize);
+  const showFolder = pane.searchResults != null;
   const virtualizer = useVirtualizer({
     count: entries.length,
     getScrollElement: () => scrollRef.current,
@@ -19,16 +34,54 @@ export function FileList({ pane, entries }: { pane: PaneState; entries: FileEntr
   });
   useEffect(() => virtualizer.measure(), [height, virtualizer]);
 
+  useEffect(() => {
+    if (!pane.cursor) return;
+    const idx = entries.findIndex((e) => e.path === pane.cursor);
+    if (idx >= 0) virtualizer.scrollToIndex(idx, { align: "auto" });
+  }, [pane.cursor, entries, virtualizer]);
+
+  const entryAt = (target: EventTarget) => {
+    const row = (target as HTMLElement).closest<HTMLElement>(".rows .row");
+    if (!row) return null;
+    return entries.find((e) => e.path === row.dataset.path) ?? null;
+  };
+
+  const onPointerDown = (ev: React.PointerEvent) => {
+    if (ev.button !== 0) return;
+    const s = useApp.getState();
+    const entry = entryAt(ev.target);
+    if (!entry) {
+      if (!ev.metaKey && !ev.shiftKey) s.clearSelection(id);
+      return;
+    }
+    if (ev.shiftKey) s.selectRange(id, entry.path);
+    else if (ev.metaKey) s.toggleSelect(id, entry.path);
+    else if (!pane.selection.has(entry.path)) s.selectOnly(id, entry.path);
+  };
+
+  const onClick = (ev: React.MouseEvent) => {
+    const entry = entryAt(ev.target);
+    if (!entry || ev.metaKey || ev.shiftKey || ev.detail > 1) return;
+    if (pane.selection.size > 1 && pane.selection.has(entry.path)) useApp.getState().selectOnly(id, entry.path);
+  };
+
+  const onDoubleClick = (ev: React.MouseEvent) => {
+    const entry = entryAt(ev.target);
+    if (entry) useApp.getState().openEntries(id, [entry]);
+  };
+
   return (
-    <div className="file-list">
+    <div className={`file-list${showFolder ? " with-folder" : ""}`}>
       <div className="header row">
-        <div className="cell name">Name</div>
-        <div className="cell date">Date Modified</div>
-        <div className="cell kind">Kind</div>
-        <div className="cell size">Size</div>
+        {COLUMNS.map((c) => (
+          <div key={c.key} className={`cell ${c.cls}${pane.sortKey === c.key ? " sorted" : ""}`} onClick={() => useApp.getState().setSort(id, c.key)}>
+            {c.label}
+            {pane.sortKey === c.key && <span className="sort-arrow">{pane.sortDir === "asc" ? "▲" : "▼"}</span>}
+          </div>
+        )).flatMap((el, i) => (i === 1 && showFolder ? [<div key="folder" className="cell folder">Folder</div>, el] : [el]))}
       </div>
-      <div className="scroll" ref={scrollRef}>
-        <div className="rows" style={{ height: virtualizer.getTotalSize() }}>
+      <div className="scroll" ref={scrollRef} onPointerDown={onPointerDown} onClick={onClick} onDoubleClick={onDoubleClick} data-pane-scroll={id}>
+        <div className="rows" style={{ height: Math.max(virtualizer.getTotalSize(), 1) }}>
           {virtualizer.getVirtualItems().map((v) => {
             const e = entries[v.index];
             return (
@@ -40,6 +93,7 @@ export function FileList({ pane, entries }: { pane: PaneState; entries: FileEntr
                 iconSize={pane.itemSize}
                 selected={pane.selection.has(e.path)}
                 cursor={pane.cursor === e.path}
+                folderColumn={showFolder ? relativeFolder(pane.path, e.path) : null}
               />
             );
           })}
