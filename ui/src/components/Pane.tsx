@@ -33,6 +33,12 @@ export function Pane({ id }: { id: PaneId }) {
           {entries.length} items
         </span>
         {pane.loading && <span>Loading…</span>}
+        {pane.recursive && pane.nameFilter.trim() && !pane.searchDone && (
+          <span className="searching">
+            <span className="spinner" /> Searching…
+          </span>
+        )}
+        {pane.searchTruncated && <span>Showing first 10,000</span>}
       </div>
     </section>
   );

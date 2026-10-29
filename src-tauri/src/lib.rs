@@ -1,7 +1,9 @@
 mod commands;
 mod icon_protocol;
 mod macos;
+mod search;
 mod settings;
+mod watcher;
 
 pub fn run() {
     tauri::Builder::default()
@@ -24,6 +26,9 @@ pub fn run() {
             commands::quicklook_show,
             commands::quicklook_update,
             commands::quicklook_close,
+            search::start_search,
+            search::cancel_search,
+            watcher::watch_dir,
             settings::load_settings,
             settings::save_settings,
         ])

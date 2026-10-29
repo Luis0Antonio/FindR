@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, toFsError, type FileEntry, type FileKind, type FsError, type Settings } from "../api";
+import { api, toFsError, type FileEntry, type FileKind, type FsError, type SearchBatch, type Settings } from "../api";
 import { parentOf } from "../format";
 import { visibleEntries } from "./visible";
 
@@ -75,7 +75,7 @@ interface AppState {
   patchPane: (id: PaneId, patch: Partial<PaneState>) => void;
   setActive: (id: PaneId) => void;
   navigate: (id: PaneId, path: string, opts?: { select?: string; history?: "push" | "keep" }) => Promise<void>;
-  reload: (id: PaneId) => Promise<void>;
+  reload: (id: PaneId, opts?: { fromWatcher?: boolean }) => Promise<void>;
   back: (id: PaneId) => void;
   forward: (id: PaneId) => void;
   up: (id: PaneId) => void;
@@ -90,7 +90,20 @@ interface AppState {
   clearSelection: (id: PaneId) => void;
   moveCursor: (id: PaneId, delta: number, extend: boolean) => void;
   setGoToOpen: (open: boolean) => void;
+  setNameFilter: (id: PaneId, text: string) => void;
+  setRecursive: (id: PaneId, on: boolean) => void;
+  toggleKind: (id: PaneId, kind: FileKind) => void;
+  clearKinds: (id: PaneId) => void;
+  toggleHidden: () => void;
+  runSearch: (id: PaneId) => Promise<void>;
+  stopSearch: (id: PaneId) => void;
+  onSearchBatch: (batch: SearchBatch) => void;
+  onDirChanged: (path: string) => void;
 }
+
+const searchTimers: Partial<Record<PaneId, number>> = {};
+const SEARCH_DEBOUNCE_MS = 200;
+let searchCounter = 0;
 
 export const useApp = create<AppState>((set, get) => ({
   panes: { left: newPane("/"), right: newPane("/") },
@@ -146,19 +159,18 @@ export const useApp = create<AppState>((set, get) => ({
         historyIndex,
         entries: [],
         nameFilter: "",
-        searchResults: null,
-        searchId: null,
-        searchDone: true,
         renaming: null,
       });
+      get().stopSearch(id);
     }
     get().patchPane(id, { selection: new Set(select ? [select] : []), anchor: select, cursor: select });
     await get().reload(id);
   },
 
-  reload: async (id) => {
+  reload: async (id, opts) => {
     const path = get().panes[id].path;
     get().patchPane(id, { loading: true });
+    api.watchDir(id, path);
     try {
       const entries = await api.listDir(path, get().showHidden);
       const pane = get().panes[id];
@@ -175,7 +187,14 @@ export const useApp = create<AppState>((set, get) => ({
       });
     } catch (e) {
       if (get().panes[id].path !== path) return;
-      get().patchPane(id, { entries: [], error: toFsError(e), loading: false });
+      const error = toFsError(e);
+      if (error.code === "not_found" && opts?.fromWatcher) {
+        for (let dir = parentOf(path); dir; dir = parentOf(dir)) {
+          const ok = await api.listDir(dir, false).then(() => true, () => false);
+          if (ok) return get().navigate(id, dir, { history: "keep" });
+        }
+      }
+      get().patchPane(id, { entries: [], error, loading: false });
     }
   },
 
@@ -260,6 +279,81 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   setGoToOpen: (open) => set({ goToOpen: open }),
+
+  setNameFilter: (id, text) => {
+    get().patchPane(id, { nameFilter: text });
+    if (get().panes[id].recursive) {
+      window.clearTimeout(searchTimers[id]);
+      searchTimers[id] = window.setTimeout(() => get().runSearch(id), SEARCH_DEBOUNCE_MS);
+    }
+  },
+
+  setRecursive: (id, on) => {
+    get().patchPane(id, { recursive: on });
+    if (on) get().runSearch(id);
+    else get().stopSearch(id);
+  },
+
+  toggleKind: (id, kind) => {
+    const kinds = new Set(get().panes[id].kindFilter);
+    if (kinds.has(kind)) kinds.delete(kind);
+    else kinds.add(kind);
+    get().patchPane(id, { kindFilter: kinds });
+    if (get().panes[id].recursive) get().runSearch(id);
+  },
+
+  clearKinds: (id) => {
+    get().patchPane(id, { kindFilter: new Set() });
+    if (get().panes[id].recursive) get().runSearch(id);
+  },
+
+  toggleHidden: () => {
+    set({ showHidden: !get().showHidden });
+    for (const id of ["left", "right"] as PaneId[]) {
+      if (id === "right" && !get().splitEnabled) continue;
+      get().reload(id);
+      if (get().panes[id].recursive) get().runSearch(id);
+    }
+  },
+
+  runSearch: async (id) => {
+    get().stopSearch(id);
+    const p = get().panes[id];
+    const query = p.nameFilter.trim();
+    if (!p.recursive || !query) {
+      get().patchPane(id, { searchResults: null, searchId: null, searchDone: true, searchTruncated: false });
+      return;
+    }
+    const searchId = `${id}-${++searchCounter}`;
+    get().patchPane(id, { searchResults: [], searchId, searchDone: false, searchTruncated: false });
+    await api.startSearch(searchId, p.path, query, [...p.kindFilter], get().showHidden);
+  },
+
+  stopSearch: (id) => {
+    window.clearTimeout(searchTimers[id]);
+    const p = get().panes[id];
+    if (p.searchId) api.cancelSearch(p.searchId);
+    get().patchPane(id, { searchId: null, searchResults: null, searchDone: true, searchTruncated: false });
+  },
+
+  onSearchBatch: (batch) => {
+    for (const id of ["left", "right"] as PaneId[]) {
+      const p = get().panes[id];
+      if (p.searchId !== batch.searchId) continue;
+      get().patchPane(id, {
+        searchResults: batch.entries.length ? [...(p.searchResults ?? []), ...batch.entries] : p.searchResults,
+        searchDone: batch.done,
+        searchTruncated: batch.truncated ?? p.searchTruncated,
+      });
+    }
+  },
+
+  onDirChanged: (path) => {
+    for (const id of ["left", "right"] as PaneId[]) {
+      if (id === "right" && !get().splitEnabled) continue;
+      if (get().panes[id].path === path) get().reload(id, { fromWatcher: true });
+    }
+  },
 }));
 
 export function activePaneState() {

@@ -49,9 +49,25 @@ export const api = {
   openPrivacySettings: () => invoke<void>("open_privacy_settings"),
   loadSettings: () => invoke<Settings | null>("load_settings"),
   saveSettings: (settings: Settings) => invoke<void>("save_settings", { settings }),
+  startSearch: (searchId: string, root: string, query: string, kinds: FileKind[], showHidden: boolean) =>
+    invoke<string>("start_search", { searchId, root, query, kinds, showHidden }),
+  cancelSearch: (searchId: string) => invoke<void>("cancel_search", { searchId }),
+  watchDir: (paneId: string, path: string) => invoke<void>("watch_dir", { paneId, path }),
   log: (msg: string) => invoke<void>("debug_log", { msg }),
 };
 
 export function iconUrl(path: string, size: number): string {
   return `icon://localhost/${size}/${encodeURIComponent(path)}`;
+}
+
+export interface SearchBatch {
+  searchId: string;
+  entries: FileEntry[];
+  done: boolean;
+  truncated?: boolean;
+}
+
+export interface DirChanged {
+  paneId: string;
+  path: string;
 }

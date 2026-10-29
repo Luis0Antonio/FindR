@@ -1,4 +1,5 @@
 import { activePaneState, useApp } from "./state/panes";
+import { focusSearch } from "./components/Toolbar";
 
 function inTextField(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
@@ -13,6 +14,8 @@ export function handleKeyDown(e: KeyboardEvent) {
   let handled = true;
 
   if (cmd && e.shiftKey && e.code === "KeyG") s.setGoToOpen(true);
+  else if (cmd && e.shiftKey && e.code === "Period") s.toggleHidden();
+  else if (cmd && e.code === "KeyF") focusSearch(id);
   else if (cmd && e.key === "ArrowUp") s.up(id);
   else if (cmd && e.key === "ArrowDown") s.openSelection(id);
   else if (cmd && e.code === "BracketLeft") s.back(id);

@@ -2,6 +2,7 @@ pub mod entry;
 pub mod error;
 pub mod kind;
 pub mod list;
+pub mod search;
 pub mod sort;
 
 pub use entry::{FileEntry, FileKind};
