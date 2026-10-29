@@ -28,7 +28,7 @@ pub fn run() {
             commands::paths_exist,
             commands::move_items,
             commands::volume_of,
-            commands::debug_log,
+            commands::reveal_in_finder,
             commands::quicklook_show,
             commands::quicklook_update,
             commands::quicklook_close,

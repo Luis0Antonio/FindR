@@ -31,7 +31,7 @@ export function Pane({ id, grow }: { id: PaneId; grow: number }) {
       <div className="statusbar">
         <span>
           {pane.selection.size > 0 ? `${pane.selection.size} of ` : ""}
-          {entries.length} items
+          {entries.length} {entries.length === 1 ? "item" : "items"}
         </span>
         {pane.loading && <span>Loading…</span>}
         {pane.recursive && pane.nameFilter.trim() && !pane.searchDone && (

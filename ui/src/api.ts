@@ -61,7 +61,7 @@ export const api = {
   moveItems: (sources: string[], targetDir: string, copy: boolean, policy: ConflictPolicy | null, opId: string) =>
     invoke<OpResult>("move_items", { sources, targetDir, copy, policy, opId }),
   volumeOf: (path: string) => invoke<number>("volume_of", { path }),
-  log: (msg: string) => invoke<void>("debug_log", { msg }),
+  revealInFinder: (paths: string[]) => invoke<void>("reveal_in_finder", { paths }),
 };
 
 export function iconUrl(path: string, size: number): string {

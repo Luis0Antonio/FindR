@@ -110,7 +110,18 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
             );
           })}
         </div>
+        {entries.length === 0 && <EmptyState pane={pane} />}
       </div>
     </div>
   );
+}
+
+function EmptyState({ pane }: { pane: PaneState }) {
+  const query = pane.nameFilter.trim();
+  const searching = pane.recursive && query !== "";
+  if (pane.loading || (searching && !pane.searchDone)) return null;
+  let text = "This folder is empty";
+  if (searching) text = `No results for “${query}” in this folder or its subfolders`;
+  else if (query || pane.kindFilter.size > 0) text = "No items match the current filter";
+  return <div className="empty-state">{text}</div>;
 }

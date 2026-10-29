@@ -40,8 +40,8 @@ pub fn startup_dir() -> Option<String> {
 }
 
 #[tauri::command]
-pub fn debug_log(msg: String) {
-    println!("[ui] {msg}");
+pub async fn reveal_in_finder(app: AppHandle, paths: Vec<String>) -> FsResult<()> {
+    app.opener().reveal_items_in_dir(paths).map_err(|e| FsError::Io(e.to_string()))
 }
 
 #[tauri::command]
