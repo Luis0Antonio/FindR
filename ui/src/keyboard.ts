@@ -1,5 +1,6 @@
 import { activePaneState, useApp } from "./state/panes";
 import { focusSearch } from "./components/Toolbar";
+import { closeQuickLook, isQuickLookOpen, toggleQuickLook } from "./quicklook";
 
 function inTextField(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
@@ -31,6 +32,8 @@ export function handleKeyDown(e: KeyboardEvent) {
   else if (cmd && !e.shiftKey && e.code === "KeyA") s.selectAll(id);
   else if (!cmd && e.key === "ArrowUp") s.moveCursor(id, -1, e.shiftKey);
   else if (!cmd && e.key === "ArrowDown") s.moveCursor(id, 1, e.shiftKey);
+  else if (!cmd && e.key === " ") toggleQuickLook();
+  else if (e.key === "Escape" && isQuickLookOpen()) closeQuickLook();
   else if (e.key === "Escape") s.clearSelection(id);
   else handled = false;
 

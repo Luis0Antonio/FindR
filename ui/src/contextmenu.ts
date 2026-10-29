@@ -2,6 +2,7 @@ import { Menu } from "@tauri-apps/api/menu";
 import type { FileEntry } from "./api";
 import { useApp, type PaneId } from "./state/panes";
 import { visibleEntries } from "./state/visible";
+import { isQuickLookOpen, toggleQuickLook } from "./quicklook";
 
 type Item = { text: string; action: () => void; enabled?: boolean } | "-";
 
@@ -20,6 +21,7 @@ export function showRowMenu(id: PaneId, entry: FileEntry) {
   const single = selected.length === 1;
   popup([
     { text: "Open", action: () => s.openEntries(id, selected) },
+    { text: "Quick Look", action: () => !isQuickLookOpen() && toggleQuickLook() },
     "-",
     { text: "Rename", enabled: single, action: () => s.startRename(id, entry.path) },
     { text: "Add to Sidebar", enabled: single && entry.isDir, action: () => s.addFavorite(entry.path) },

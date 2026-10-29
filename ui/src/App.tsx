@@ -4,6 +4,7 @@ import { Pane } from "./components/Pane";
 import { Sidebar } from "./components/Sidebar";
 import { GoToFolder } from "./components/GoToFolder";
 import { handleKeyDown } from "./keyboard";
+import { startQuickLookSync } from "./quicklook";
 import { listen } from "@tauri-apps/api/event";
 import type { DirChanged, SearchBatch } from "./api";
 
@@ -11,7 +12,10 @@ export function App() {
   const ready = useApp((s) => s.ready);
   const goToOpen = useApp((s) => s.goToOpen);
   useEffect(() => {
-    useApp.getState().init().then(startSettingsPersistence);
+    useApp.getState().init().then(() => {
+      startSettingsPersistence();
+      startQuickLookSync();
+    });
     window.addEventListener("keydown", handleKeyDown);
     const onFocus = () => {
       const s = useApp.getState();
