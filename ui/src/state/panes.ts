@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, toFsError, type FileEntry, type FileKind, type FsError, type SearchBatch, type Settings, type Volume } from "../api";
+import { api, toFsError, type ConflictPolicy, type FileEntry, type FileKind, type FsError, type SearchBatch, type Settings, type Volume } from "../api";
 import { parentOf } from "../format";
 import { visibleEntries } from "./visible";
 
@@ -72,6 +72,9 @@ interface AppState {
   goToOpen: boolean;
   volumes: Volume[];
   missingFavorites: Set<string>;
+  conflictPrompt: ConflictPrompt | null;
+  notice: string | null;
+  progress: { done: number; total: number } | null;
 
   init: () => Promise<void>;
   patchPane: (id: PaneId, patch: Partial<PaneState>) => void;
@@ -112,6 +115,12 @@ interface AppState {
   loadVolumes: () => Promise<void>;
 }
 
+export interface ConflictPrompt {
+  name: string;
+  remaining: number;
+  resolve: (choice: { policy: ConflictPolicy; all: boolean }) => void;
+}
+
 const refreshAfterRename: Partial<Record<PaneId, boolean>> = {};
 
 const searchTimers: Partial<Record<PaneId, number>> = {};
@@ -130,6 +139,9 @@ export const useApp = create<AppState>((set, get) => ({
   goToOpen: false,
   volumes: [],
   missingFavorites: new Set(),
+  conflictPrompt: null,
+  notice: null,
+  progress: null,
 
   init: async () => {
     const [home, startup, saved] = await Promise.all([api.homeDir(), api.startupDir(), api.loadSettings().catch(() => null)]);

@@ -78,3 +78,42 @@ pub fn list_volumes() -> Vec<crate::macos::volumes::Volume> {
 pub fn paths_exist(paths: Vec<String>) -> Vec<bool> {
     paths.iter().map(|p| Path::new(p).is_dir()).collect()
 }
+
+const PROGRESS_THRESHOLD: u64 = 50 * 1000 * 1000;
+
+#[tauri::command]
+pub async fn move_items(
+    app: AppHandle,
+    sources: Vec<String>,
+    target_dir: String,
+    copy: bool,
+    policy: Option<fs_core::ops::ConflictPolicy>,
+    op_id: String,
+) -> FsResult<fs_core::ops::OpResult> {
+    use fs_core::ops::{device_of, move_items, total_size, Progress};
+    use tauri::Emitter;
+    blocking(move || {
+        let target = PathBuf::from(&target_dir);
+        let target_dev = device_of(&target).ok();
+        let copies_bytes = copy || sources.iter().any(|s| device_of(Path::new(s)).ok() != target_dev);
+        let total = if copies_bytes { sources.iter().map(|s| total_size(Path::new(s))).sum() } else { 0 };
+        let mut last = std::time::Instant::now();
+        let mut report = |done: u64, total: u64| {
+            if done == total || last.elapsed() >= std::time::Duration::from_millis(100) {
+                last = std::time::Instant::now();
+                let _ = app.emit(
+                    "op://progress",
+                    serde_json::json!({ "opId": op_id, "doneBytes": done, "totalBytes": total }),
+                );
+            }
+        };
+        let progress = (total > PROGRESS_THRESHOLD).then(|| Progress { total, done: 0, report: &mut report });
+        Ok(move_items(&sources, &target, copy, policy, progress))
+    })
+    .await
+}
+
+#[tauri::command]
+pub fn volume_of(path: String) -> FsResult<u64> {
+    fs_core::ops::device_of(Path::new(&path)).map_err(|e| FsError::from_io(e, &path))
+}

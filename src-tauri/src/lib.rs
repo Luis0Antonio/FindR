@@ -26,6 +26,8 @@ pub fn run() {
             commands::rename,
             commands::list_volumes,
             commands::paths_exist,
+            commands::move_items,
+            commands::volume_of,
             commands::debug_log,
             commands::quicklook_show,
             commands::quicklook_update,

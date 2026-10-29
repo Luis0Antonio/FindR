@@ -57,6 +57,9 @@ export const api = {
   rename: (path: string, newName: string) => invoke<FileEntry>("rename", { path, newName }),
   listVolumes: () => invoke<Volume[]>("list_volumes"),
   pathsExist: (paths: string[]) => invoke<boolean[]>("paths_exist", { paths }),
+  moveItems: (sources: string[], targetDir: string, copy: boolean, policy: ConflictPolicy | null, opId: string) =>
+    invoke<OpResult>("move_items", { sources, targetDir, copy, policy, opId }),
+  volumeOf: (path: string) => invoke<number>("volume_of", { path }),
   log: (msg: string) => invoke<void>("debug_log", { msg }),
 };
 
@@ -79,4 +82,18 @@ export interface DirChanged {
 export interface Volume {
   name: string;
   path: string;
+}
+
+export type ConflictPolicy = "replace" | "keepBoth" | "skip";
+
+export interface OpResult {
+  done: string[];
+  conflicts: { source: string; target: string }[];
+  errors: { path: string; message: string }[];
+}
+
+export interface OpProgress {
+  opId: string;
+  doneBytes: number;
+  totalBytes: number;
 }

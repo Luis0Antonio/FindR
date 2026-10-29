@@ -8,7 +8,7 @@ function inTextField(target: EventTarget | null): boolean {
 }
 
 export function handleKeyDown(e: KeyboardEvent) {
-  if (inTextField(e.target) || useApp.getState().goToOpen) return;
+  if (inTextField(e.target) || useApp.getState().goToOpen || useApp.getState().conflictPrompt) return;
   const s = useApp.getState();
   const { id, pane } = activePaneState();
   const cmd = e.metaKey;

@@ -9,6 +9,7 @@ export function Pane({ id }: { id: PaneId }) {
   const pane = useApp((s) => s.panes[id]);
   const active = useApp((s) => s.activePane === id);
   const split = useApp((s) => s.splitEnabled);
+  const progress = useApp((s) => s.progress);
   const entries = useMemo(() => visibleEntries(pane), [pane]);
   return (
     <section className={`pane${active && split ? " active" : ""}`} onPointerDownCapture={() => useApp.getState().setActive(id)}>
@@ -39,6 +40,11 @@ export function Pane({ id }: { id: PaneId }) {
           </span>
         )}
         {pane.searchTruncated && <span>Showing first 10,000</span>}
+        {progress && active && (
+          <span className="progress">
+            Copying… <progress value={progress.done} max={progress.total} />
+          </span>
+        )}
       </div>
     </section>
   );

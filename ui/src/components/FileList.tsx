@@ -4,6 +4,7 @@ import type { FileEntry } from "../api";
 import { useApp, type PaneId, type PaneState, type SortKey } from "../state/panes";
 import { FileRow } from "./FileRow";
 import { showBackgroundMenu, showRowMenu } from "../contextmenu";
+import { beginDrag, itemSource } from "../dnd";
 
 export function rowHeight(itemSize: number) {
   return Math.max(22, itemSize + 6);
@@ -58,6 +59,7 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
     if (ev.shiftKey) s.selectRange(id, entry.path);
     else if (ev.metaKey) s.toggleSelect(id, entry.path);
     else if (!pane.selection.has(entry.path)) s.selectOnly(id, entry.path);
+    if (pane.renaming !== entry.path) beginDrag(ev, itemSource(id));
   };
 
   const onClick = (ev: React.MouseEvent) => {

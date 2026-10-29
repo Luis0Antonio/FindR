@@ -1,5 +1,6 @@
 import { iconUrl } from "../api";
 import { showFavoriteMenu } from "../contextmenu";
+import { beginDrag, favoriteSource } from "../dnd";
 import { baseName } from "../format";
 import { useApp } from "../state/panes";
 
@@ -23,6 +24,7 @@ export function Sidebar() {
           title={missing.has(path) ? `${path} (not found)` : path}
           data-favorite={path}
           data-drop-target={missing.has(path) ? undefined : path}
+          onPointerDown={(e) => beginDrag(e, favoriteSource(path))}
           onClick={() => go(path)}
           onContextMenu={(e) => {
             e.preventDefault();
