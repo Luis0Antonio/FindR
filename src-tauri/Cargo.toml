@@ -1,0 +1,29 @@
+[package]
+name = "rfinder"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "rfinder_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+fs-core = { path = "../crates/fs-core" }
+lru = "0.19.0"
+notify = "8"
+notify-debouncer-full = "0.7"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-store = "2"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+block2 = "0.6"
+objc2 = "0.6"
+objc2-app-kit = "0.3"
+objc2-foundation = "0.3"
+objc2-quick-look-ui = "0.3"
