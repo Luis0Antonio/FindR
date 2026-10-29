@@ -79,6 +79,8 @@ interface AppState {
   init: () => Promise<void>;
   patchPane: (id: PaneId, patch: Partial<PaneState>) => void;
   setActive: (id: PaneId) => void;
+  toggleSplit: () => void;
+  setSplitRatio: (ratio: number) => void;
   navigate: (id: PaneId, path: string, opts?: { select?: string; history?: "push" | "keep" }) => Promise<void>;
   reload: (id: PaneId, opts?: { fromWatcher?: boolean }) => Promise<void>;
   back: (id: PaneId) => void;
@@ -173,6 +175,28 @@ export const useApp = create<AppState>((set, get) => ({
   setActive: (id) => {
     if (get().activePane !== id) set({ activePane: id });
   },
+
+  toggleSplit: () => {
+    const s = get();
+    if (s.splitEnabled) {
+      s.stopSearch("right");
+      api.unwatchDir("right");
+      set({ splitEnabled: false, activePane: "left" });
+      return;
+    }
+    const { path } = s.panes.left;
+    const right = s.panes.right;
+    set({
+      splitEnabled: true,
+      panes: {
+        ...s.panes,
+        right: { ...newPane(path), sortKey: right.sortKey, sortDir: right.sortDir, foldersFirst: right.foldersFirst, itemSize: right.itemSize },
+      },
+    });
+    get().reload("right");
+  },
+
+  setSplitRatio: (ratio) => set({ splitRatio: Math.min(0.8, Math.max(0.2, ratio)) }),
 
   navigate: async (id, path, opts) => {
     const pane = get().panes[id];

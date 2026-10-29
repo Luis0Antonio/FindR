@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { startSettingsPersistence, useApp } from "./state/panes";
 import { Pane } from "./components/Pane";
 import { Sidebar } from "./components/Sidebar";
+import { Divider } from "./components/Divider";
 import { GoToFolder } from "./components/GoToFolder";
 import { ConflictDialog } from "./components/ConflictDialog";
 import { handleKeyDown } from "./keyboard";
@@ -13,6 +14,8 @@ export function App() {
   const ready = useApp((s) => s.ready);
   const goToOpen = useApp((s) => s.goToOpen);
   const notice = useApp((s) => s.notice);
+  const split = useApp((s) => s.splitEnabled);
+  const ratio = useApp((s) => s.splitRatio);
   useEffect(() => {
     useApp.getState().init().then(() => {
       startSettingsPersistence();
@@ -42,7 +45,13 @@ export function App() {
     <div className="app">
       <Sidebar />
       <main className="panes">
-        <Pane id="left" />
+        <Pane id="left" grow={split ? ratio : 1} />
+        {split && (
+          <>
+            <Divider />
+            <Pane id="right" grow={1 - ratio} />
+          </>
+        )}
       </main>
       {goToOpen && <GoToFolder />}
       <ConflictDialog />

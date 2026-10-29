@@ -5,14 +5,14 @@ import { visibleEntries } from "../state/visible";
 import { FileList } from "./FileList";
 import { Toolbar } from "./Toolbar";
 
-export function Pane({ id }: { id: PaneId }) {
+export function Pane({ id, grow }: { id: PaneId; grow: number }) {
   const pane = useApp((s) => s.panes[id]);
   const active = useApp((s) => s.activePane === id);
   const split = useApp((s) => s.splitEnabled);
   const progress = useApp((s) => s.progress);
   const entries = useMemo(() => visibleEntries(pane), [pane]);
   return (
-    <section className={`pane${active && split ? " active" : ""}`} onPointerDownCapture={() => useApp.getState().setActive(id)}>
+    <section className={`pane${active && split ? " active" : ""}`} style={{ flexGrow: grow }} onPointerDownCapture={() => useApp.getState().setActive(id)}>
       <Toolbar id={id} />
       {pane.error ? (
         <div className="pane-message">

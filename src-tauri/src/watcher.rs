@@ -71,3 +71,8 @@ pub fn watch_dir(app: AppHandle, pane_id: String, path: String) {
     });
     map.insert(pane_id, PaneWatch { _watcher: watcher, alive });
 }
+
+#[tauri::command]
+pub fn unwatch_dir(pane_id: String) {
+    watches().lock().unwrap().remove(&pane_id);
+}

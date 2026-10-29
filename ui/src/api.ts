@@ -53,6 +53,7 @@ export const api = {
     invoke<string>("start_search", { searchId, root, query, kinds, showHidden }),
   cancelSearch: (searchId: string) => invoke<void>("cancel_search", { searchId }),
   watchDir: (paneId: string, path: string) => invoke<void>("watch_dir", { paneId, path }),
+  unwatchDir: (paneId: string) => invoke<void>("unwatch_dir", { paneId }),
   createFolder: (parent: string) => invoke<FileEntry>("create_folder", { parent }),
   rename: (path: string, newName: string) => invoke<FileEntry>("rename", { path, newName }),
   listVolumes: () => invoke<Volume[]>("list_volumes"),

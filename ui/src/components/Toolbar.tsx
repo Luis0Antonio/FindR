@@ -39,6 +39,7 @@ export function focusSearch(id: PaneId) {
 
 export function Toolbar({ id }: { id: PaneId }) {
   const pane = useApp((s) => s.panes[id]);
+  const split = useApp((s) => s.splitEnabled);
   const s = useApp.getState();
   return (
     <div className="toolbar-wrap">
@@ -88,6 +89,14 @@ export function Toolbar({ id }: { id: PaneId }) {
             }
           }}
         />
+        {id === "left" && (
+          <button className={`tb${split ? " on" : ""}`} title="Split View (⇧⌘S)" onClick={() => s.toggleSplit()}>
+            <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.2">
+              <rect x="1.5" y="1.5" width="15" height="11" rx="1.5" />
+              <path d="M9 1.5v11" />
+            </svg>
+          </button>
+        )}
       </div>
       <div className="chips">
         <label className={`chip toggle${pane.recursive ? " on" : ""}`} title="Search inside subfolders">

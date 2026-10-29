@@ -14,7 +14,10 @@ export function handleKeyDown(e: KeyboardEvent) {
   const cmd = e.metaKey;
   let handled = true;
 
-  if (cmd && e.shiftKey && e.code === "KeyG") s.setGoToOpen(true);
+  if (cmd && e.shiftKey && e.code === "KeyS") s.toggleSplit();
+  else if (e.key === "Tab" && !cmd) {
+    if (s.splitEnabled) s.setActive(id === "left" ? "right" : "left");
+  } else if (cmd && e.shiftKey && e.code === "KeyG") s.setGoToOpen(true);
   else if (cmd && e.shiftKey && e.code === "KeyN") s.createFolder(id);
   else if (cmd && e.ctrlKey && e.code === "KeyT") {
     const sel = pane.selection.size === 1 ? [...pane.selection][0] : null;

@@ -35,6 +35,7 @@ pub fn run() {
             search::start_search,
             search::cancel_search,
             watcher::watch_dir,
+            watcher::unwatch_dir,
             settings::load_settings,
             settings::save_settings,
         ])
