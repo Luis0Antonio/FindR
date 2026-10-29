@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { api, toFsError, type FileEntry, type FileKind, type FsError, type SearchBatch, type Settings } from "../api";
+import { api, toFsError, type FileEntry, type FileKind, type FsError, type SearchBatch, type Settings, type Volume } from "../api";
 import { parentOf } from "../format";
 import { visibleEntries } from "./visible";
 
@@ -70,6 +70,8 @@ interface AppState {
   home: string;
   ready: boolean;
   goToOpen: boolean;
+  volumes: Volume[];
+  missingFavorites: Set<string>;
 
   init: () => Promise<void>;
   patchPane: (id: PaneId, patch: Partial<PaneState>) => void;
@@ -99,7 +101,18 @@ interface AppState {
   stopSearch: (id: PaneId) => void;
   onSearchBatch: (batch: SearchBatch) => void;
   onDirChanged: (path: string) => void;
+  startRename: (id: PaneId, path?: string) => void;
+  cancelRename: (id: PaneId) => void;
+  commitRename: (id: PaneId, newName: string) => Promise<FsError | null>;
+  createFolder: (id: PaneId) => Promise<void>;
+  addFavorite: (path: string) => void;
+  removeFavorite: (path: string) => void;
+  moveFavorite: (path: string, toIndex: number) => void;
+  refreshFavorites: () => Promise<void>;
+  loadVolumes: () => Promise<void>;
 }
+
+const refreshAfterRename: Partial<Record<PaneId, boolean>> = {};
 
 const searchTimers: Partial<Record<PaneId, number>> = {};
 const SEARCH_DEBOUNCE_MS = 200;
@@ -115,6 +128,8 @@ export const useApp = create<AppState>((set, get) => ({
   home: "/",
   ready: false,
   goToOpen: false,
+  volumes: [],
+  missingFavorites: new Set(),
 
   init: async () => {
     const [home, startup, saved] = await Promise.all([api.homeDir(), api.startupDir(), api.loadSettings().catch(() => null)]);
@@ -136,6 +151,9 @@ export const useApp = create<AppState>((set, get) => ({
       ready: true,
     });
     await Promise.all([get().reload("left"), get().splitEnabled ? get().reload("right") : null]);
+    get().refreshFavorites();
+    get().loadVolumes();
+    api.watchDir("volumes", "/Volumes");
   },
 
   patchPane: (id, patch) => set((s) => ({ panes: { ...s.panes, [id]: { ...s.panes[id], ...patch } } })),
@@ -349,11 +367,100 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   onDirChanged: (path) => {
+    if (path === "/Volumes") {
+      get().loadVolumes();
+      return;
+    }
     for (const id of ["left", "right"] as PaneId[]) {
       if (id === "right" && !get().splitEnabled) continue;
-      if (get().panes[id].path === path) get().reload(id, { fromWatcher: true });
+      if (get().panes[id].path !== path) continue;
+      if (get().panes[id].renaming) refreshAfterRename[id] = true;
+      else get().reload(id, { fromWatcher: true });
     }
   },
+
+  startRename: (id, path) => {
+    const p = get().panes[id];
+    const target = path ?? (p.selection.size === 1 ? [...p.selection][0] : null);
+    if (!target) return;
+    get().patchPane(id, { renaming: target, selection: new Set([target]), cursor: target, anchor: target });
+  },
+
+  cancelRename: (id) => {
+    get().patchPane(id, { renaming: null });
+    if (refreshAfterRename[id]) {
+      refreshAfterRename[id] = false;
+      get().reload(id);
+    }
+  },
+
+  commitRename: async (id, newName) => {
+    const p = get().panes[id];
+    const path = p.renaming;
+    if (!path) return null;
+    const old = (p.searchResults ?? p.entries).find((e) => e.path === path);
+    if (!old || newName === old.name) {
+      get().cancelRename(id);
+      return null;
+    }
+    try {
+      const updated = await api.rename(path, newName);
+      const swap = (list: FileEntry[]) => list.map((e) => (e.path === path ? updated : e));
+      const now = get().panes[id];
+      get().patchPane(id, {
+        entries: swap(now.entries),
+        searchResults: now.searchResults ? swap(now.searchResults) : null,
+        selection: new Set([updated.path]),
+        cursor: updated.path,
+        anchor: updated.path,
+      });
+      if (get().favorites.includes(path)) set({ favorites: get().favorites.map((f) => (f === path ? updated.path : f)) });
+      get().cancelRename(id);
+      return null;
+    } catch (e) {
+      return toFsError(e);
+    }
+  },
+
+  createFolder: async (id) => {
+    const p = get().panes[id];
+    try {
+      const entry = await api.createFolder(p.path);
+      const now = get().panes[id];
+      get().patchPane(id, {
+        entries: [...now.entries.filter((e) => e.path !== entry.path), entry],
+        searchResults: now.searchResults ? [...now.searchResults, entry] : null,
+        selection: new Set([entry.path]),
+        cursor: entry.path,
+        anchor: entry.path,
+        renaming: entry.path,
+      });
+    } catch (e) {
+      get().patchPane(id, { error: toFsError(e) });
+    }
+  },
+
+  addFavorite: (path) => {
+    if (get().favorites.includes(path)) return;
+    set({ favorites: [...get().favorites, path] });
+    get().refreshFavorites();
+  },
+
+  removeFavorite: (path) => set({ favorites: get().favorites.filter((f) => f !== path) }),
+
+  moveFavorite: (path, toIndex) => {
+    const list = get().favorites.filter((f) => f !== path);
+    list.splice(Math.max(0, Math.min(list.length, toIndex)), 0, path);
+    set({ favorites: list });
+  },
+
+  refreshFavorites: async () => {
+    const favs = get().favorites;
+    const exist = await api.pathsExist(favs);
+    set({ missingFavorites: new Set(favs.filter((_, i) => !exist[i])) });
+  },
+
+  loadVolumes: async () => set({ volumes: await api.listVolumes() }),
 }));
 
 export function activePaneState() {

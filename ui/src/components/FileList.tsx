@@ -3,6 +3,7 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import type { FileEntry } from "../api";
 import { useApp, type PaneId, type PaneState, type SortKey } from "../state/panes";
 import { FileRow } from "./FileRow";
+import { showBackgroundMenu, showRowMenu } from "../contextmenu";
 
 export function rowHeight(itemSize: number) {
   return Math.max(22, itemSize + 6);
@@ -67,7 +68,14 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
 
   const onDoubleClick = (ev: React.MouseEvent) => {
     const entry = entryAt(ev.target);
-    if (entry) useApp.getState().openEntries(id, [entry]);
+    if (entry && pane.renaming !== entry.path) useApp.getState().openEntries(id, [entry]);
+  };
+
+  const onContextMenu = (ev: React.MouseEvent) => {
+    ev.preventDefault();
+    const entry = entryAt(ev.target);
+    if (entry) showRowMenu(id, entry);
+    else showBackgroundMenu(id);
   };
 
   return (
@@ -80,7 +88,7 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
           </div>
         )).flatMap((el, i) => (i === 1 && showFolder ? [<div key="folder" className="cell folder">Folder</div>, el] : [el]))}
       </div>
-      <div className="scroll" ref={scrollRef} onPointerDown={onPointerDown} onClick={onClick} onDoubleClick={onDoubleClick} data-pane-scroll={id}>
+      <div className="scroll" ref={scrollRef} onPointerDown={onPointerDown} onClick={onClick} onDoubleClick={onDoubleClick} onContextMenu={onContextMenu} data-pane-scroll={id} data-drop-target={pane.path}>
         <div className="rows" style={{ height: Math.max(virtualizer.getTotalSize(), 1) }}>
           {virtualizer.getVirtualItems().map((v) => {
             const e = entries[v.index];
@@ -94,6 +102,8 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
                 selected={pane.selection.has(e.path)}
                 cursor={pane.cursor === e.path}
                 folderColumn={showFolder ? relativeFolder(pane.path, e.path) : null}
+                paneId={id}
+                renaming={pane.renaming === e.path}
               />
             );
           })}

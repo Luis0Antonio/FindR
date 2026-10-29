@@ -58,3 +58,23 @@ pub fn quicklook_update(app: AppHandle, paths: Vec<String>, index: usize) {
 pub fn quicklook_close(app: AppHandle) {
     crate::macos::quicklook::close(&app);
 }
+
+#[tauri::command]
+pub async fn create_folder(parent: String) -> FsResult<FileEntry> {
+    blocking(move || fs_core::ops::create_folder(Path::new(&parent), &is_package)).await
+}
+
+#[tauri::command]
+pub async fn rename(path: String, new_name: String) -> FsResult<FileEntry> {
+    blocking(move || fs_core::ops::rename(Path::new(&path), &new_name, &is_package)).await
+}
+
+#[tauri::command]
+pub fn list_volumes() -> Vec<crate::macos::volumes::Volume> {
+    crate::macos::volumes::list_volumes()
+}
+
+#[tauri::command]
+pub fn paths_exist(paths: Vec<String>) -> Vec<bool> {
+    paths.iter().map(|p| Path::new(p).is_dir()).collect()
+}

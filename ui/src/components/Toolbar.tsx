@@ -55,6 +55,12 @@ export function Toolbar({ id }: { id: PaneId }) {
           </button>
         </div>
         <Breadcrumb id={id} path={pane.path} />
+        <button className="tb" title="New Folder (⇧⌘N)" onClick={() => s.createFolder(id)}>
+          <svg width="18" height="14" viewBox="0 0 18 14" fill="none" stroke="currentColor" strokeWidth="1.2">
+            <path d="M1.5 2.5h5l1.5 1.5h8.5v8.5h-15z" />
+            <path d="M9 6v5M6.5 8.5h5" />
+          </svg>
+        </button>
         <label className="size-slider" title="Item size (⌘= / ⌘-)">
           <span className="small-a">A</span>
           <input type="range" min={MIN_ITEM} max={MAX_ITEM} step={1} value={pane.itemSize} onChange={(e) => s.setItemSize(id, Number(e.target.value))} />

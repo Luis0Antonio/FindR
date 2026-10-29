@@ -53,6 +53,10 @@ export const api = {
     invoke<string>("start_search", { searchId, root, query, kinds, showHidden }),
   cancelSearch: (searchId: string) => invoke<void>("cancel_search", { searchId }),
   watchDir: (paneId: string, path: string) => invoke<void>("watch_dir", { paneId, path }),
+  createFolder: (parent: string) => invoke<FileEntry>("create_folder", { parent }),
+  rename: (path: string, newName: string) => invoke<FileEntry>("rename", { path, newName }),
+  listVolumes: () => invoke<Volume[]>("list_volumes"),
+  pathsExist: (paths: string[]) => invoke<boolean[]>("paths_exist", { paths }),
   log: (msg: string) => invoke<void>("debug_log", { msg }),
 };
 
@@ -69,5 +73,10 @@ export interface SearchBatch {
 
 export interface DirChanged {
   paneId: string;
+  path: string;
+}
+
+export interface Volume {
+  name: string;
   path: string;
 }

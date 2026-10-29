@@ -2,6 +2,8 @@ pub mod entry;
 pub mod error;
 pub mod kind;
 pub mod list;
+pub mod names;
+pub mod ops;
 pub mod search;
 pub mod sort;
 

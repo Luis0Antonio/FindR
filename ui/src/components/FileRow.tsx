@@ -1,6 +1,8 @@
 import { memo } from "react";
 import { iconUrl, type FileEntry } from "../api";
 import { formatDate, formatSize, kindLabel } from "../format";
+import type { PaneId } from "../state/panes";
+import { RenameEditor } from "./RenameEditor";
 
 interface Props {
   entry: FileEntry;
@@ -10,9 +12,11 @@ interface Props {
   selected: boolean;
   cursor: boolean;
   folderColumn: string | null;
+  paneId: PaneId;
+  renaming: boolean;
 }
 
-export const FileRow = memo(function FileRow({ entry, top, height, iconSize, selected, cursor, folderColumn }: Props) {
+export const FileRow = memo(function FileRow({ entry, top, height, iconSize, selected, cursor, folderColumn, paneId, renaming }: Props) {
   return (
     <div
       className={`row${selected ? " selected" : ""}${cursor ? " cursor" : ""}${entry.isHidden ? " hidden-entry" : ""}`}
@@ -22,7 +26,7 @@ export const FileRow = memo(function FileRow({ entry, top, height, iconSize, sel
     >
       <div className="cell name">
         <img className="icon" src={iconUrl(entry.path, iconSize)} width={iconSize} height={iconSize} draggable={false} alt="" />
-        <span className="label">{entry.name}</span>
+        {renaming ? <RenameEditor id={paneId} entry={entry} /> : <span className="label">{entry.name}</span>}
       </div>
       {folderColumn != null && <div className="cell folder">{folderColumn}</div>}
       <div className="cell date">{formatDate(entry.modified)}</div>

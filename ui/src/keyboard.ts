@@ -14,6 +14,12 @@ export function handleKeyDown(e: KeyboardEvent) {
   let handled = true;
 
   if (cmd && e.shiftKey && e.code === "KeyG") s.setGoToOpen(true);
+  else if (cmd && e.shiftKey && e.code === "KeyN") s.createFolder(id);
+  else if (cmd && e.ctrlKey && e.code === "KeyT") {
+    const sel = pane.selection.size === 1 ? [...pane.selection][0] : null;
+    const entry = sel ? pane.entries.find((x) => x.path === sel) ?? pane.searchResults?.find((x) => x.path === sel) : null;
+    s.addFavorite(entry?.isDir ? entry.path : pane.path);
+  } else if (!cmd && e.key === "Enter" && pane.selection.size === 1) s.startRename(id);
   else if (cmd && e.shiftKey && e.code === "Period") s.toggleHidden();
   else if (cmd && e.code === "KeyF") focusSearch(id);
   else if (cmd && e.key === "ArrowUp") s.up(id);
