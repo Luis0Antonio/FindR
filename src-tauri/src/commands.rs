@@ -1,0 +1,60 @@
+use std::path::{Path, PathBuf};
+
+use fs_core::{FileEntry, FsError, FsResult};
+use tauri::AppHandle;
+use tauri_plugin_opener::OpenerExt;
+
+pub fn is_package(path: &Path, ext: &str) -> bool {
+    fs_core::kind::is_package_ext(ext) || crate::macos::icons::is_file_package(&path.to_string_lossy())
+}
+
+async fn blocking<T: Send + 'static>(f: impl FnOnce() -> FsResult<T> + Send + 'static) -> FsResult<T> {
+    tauri::async_runtime::spawn_blocking(f).await.map_err(|e| FsError::Io(e.to_string()))?
+}
+
+#[tauri::command]
+pub async fn list_dir(path: String, show_hidden: bool) -> FsResult<Vec<FileEntry>> {
+    blocking(move || fs_core::list_dir(&PathBuf::from(path), show_hidden, &is_package)).await
+}
+
+#[tauri::command]
+pub async fn open_path(app: AppHandle, path: String) -> FsResult<()> {
+    app.opener().open_path(path, None::<&str>).map_err(|e| FsError::Io(e.to_string()))
+}
+
+#[tauri::command]
+pub async fn open_privacy_settings(app: AppHandle) -> FsResult<()> {
+    app.opener()
+        .open_url("x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles", None::<&str>)
+        .map_err(|e| FsError::Io(e.to_string()))
+}
+
+#[tauri::command]
+pub fn home_dir() -> String {
+    std::env::var("HOME").unwrap_or_else(|_| "/".into())
+}
+
+#[tauri::command]
+pub fn startup_dir() -> Option<String> {
+    std::env::args().skip(1).find(|a| Path::new(a).is_dir())
+}
+
+#[tauri::command]
+pub fn debug_log(msg: String) {
+    println!("[ui] {msg}");
+}
+
+#[tauri::command]
+pub fn quicklook_show(app: AppHandle, paths: Vec<String>, index: usize) {
+    crate::macos::quicklook::show(&app, paths, index);
+}
+
+#[tauri::command]
+pub fn quicklook_update(app: AppHandle, paths: Vec<String>, index: usize) {
+    crate::macos::quicklook::update(&app, paths, index);
+}
+
+#[tauri::command]
+pub fn quicklook_close(app: AppHandle) {
+    crate::macos::quicklook::close(&app);
+}

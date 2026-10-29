@@ -3055,6 +3055,7 @@ version = "0.1.0"
 dependencies = [
  "block2",
  "fs-core",
+ "libc",
  "lru",
  "notify",
  "notify-debouncer-full",
@@ -3062,6 +3063,7 @@ dependencies = [
  "objc2-app-kit",
  "objc2-foundation",
  "objc2-quick-look-ui",
+ "percent-encoding",
  "serde",
  "serde_json",
  "tauri",
