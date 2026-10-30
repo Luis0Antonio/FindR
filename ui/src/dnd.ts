@@ -163,6 +163,12 @@ export function beginDrag(ev: React.PointerEvent, makeSource: () => Source | nul
       if (Math.hypot(e.clientX - startX, e.clientY - startY) <= THRESHOLD) return;
       if (!start()) return cleanup();
     }
+    if (source?.kind === "items" && (e.clientX < 0 || e.clientY < 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight)) {
+      clearTarget();
+      cleanup();
+      api.dragOut(source.entries.map((x) => x.path));
+      return;
+    }
     ghost!.style.transform = `translate(${e.clientX + 12}px, ${e.clientY + 10}px)`;
     refresh();
   };

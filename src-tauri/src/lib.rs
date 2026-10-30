@@ -29,6 +29,7 @@ pub fn run() {
             commands::move_items,
             commands::volume_of,
             commands::reveal_in_finder,
+            commands::drag_out,
             commands::quicklook_show,
             commands::quicklook_update,
             commands::quicklook_close,

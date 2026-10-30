@@ -45,6 +45,11 @@ pub async fn reveal_in_finder(app: AppHandle, paths: Vec<String>) -> FsResult<()
 }
 
 #[tauri::command]
+pub async fn drag_out(app: AppHandle, paths: Vec<String>) {
+    crate::macos::dragout::start(&app, paths);
+}
+
+#[tauri::command]
 pub fn quicklook_show(app: AppHandle, paths: Vec<String>, index: usize) {
     crate::macos::quicklook::show(&app, paths, index);
 }
