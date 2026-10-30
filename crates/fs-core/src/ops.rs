@@ -269,7 +269,7 @@ pub fn move_items(
                     if same_file(src, &dest) {
                         continue;
                     }
-                    if let Err(e) = trash::delete(&dest) {
+                    if let Err(e) = move_to_trash(&dest) {
                         fail(&mut result, format!("Couldn't move the existing item to the Trash: {e}"));
                         continue;
                     }
@@ -387,4 +387,15 @@ mod move_tests {
         copy_recursive(&src, &tmp.path().join("copy.bin"), &mut progress).unwrap();
         assert_eq!(seen.last(), Some(&(total, total)));
     }
+}
+
+// The default macOS method scripts Finder, which needs Automation permission; NSFileManager doesn't.
+fn move_to_trash(path: &Path) -> Result<(), trash::Error> {
+    let mut ctx = trash::TrashContext::default();
+    #[cfg(target_os = "macos")]
+    {
+        use trash::macos::{DeleteMethod, TrashContextExtMacos};
+        ctx.set_delete_method(DeleteMethod::NsFileManager);
+    }
+    ctx.delete(path)
 }
