@@ -59,7 +59,7 @@ input { font: inherit; }
 .cell.size { text-align: right; }
 .cell.name { display: flex; align-items: center; gap: 6px; }
 .cell.name .label { overflow: hidden; text-overflow: ellipsis; }
-.icon { flex: none; }
+.icon { flex: none; object-fit: contain; }
 
 .toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid var(--border); background: var(--bg-alt); min-height: 38px; }
 .nav-buttons { display: flex; gap: 2px; }

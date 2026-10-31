@@ -25,7 +25,7 @@ export const FileRow = memo(function FileRow({ entry, top, height, iconSize, sel
       data-drop-target={entry.isDir ? entry.path : undefined}
     >
       <div className="cell name">
-        <img className="icon" src={iconUrl(entry.path, iconSize)} width={iconSize} height={iconSize} draggable={false} alt="" />
+        <img className="icon" src={iconUrl(entry.path, iconSize, entry.modified)} width={iconSize} height={iconSize} draggable={false} alt="" />
         {renaming ? <RenameEditor id={paneId} entry={entry} /> : <span className="label">{entry.name}</span>}
       </div>
       {folderColumn != null && <div className="cell folder">{folderColumn}</div>}

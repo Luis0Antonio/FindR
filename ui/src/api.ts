@@ -65,8 +65,9 @@ export const api = {
   revealInFinder: (paths: string[]) => invoke<void>("reveal_in_finder", { paths }),
 };
 
-export function iconUrl(path: string, size: number): string {
-  return `icon://localhost/${size}/${encodeURIComponent(path)}`;
+export function iconUrl(path: string, size: number, modified?: number | null): string {
+  const url = `icon://localhost/${size}/${encodeURIComponent(path)}`;
+  return modified == null ? url : `${url}?m=${modified}`;
 }
 
 export interface SearchBatch {
