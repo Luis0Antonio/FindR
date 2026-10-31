@@ -127,3 +127,23 @@ pub fn volume_of(path: String) -> FsResult<u64> {
 pub async fn convert_file(path: String, target: String) -> FsResult<String> {
     blocking(move || crate::convert::convert_file(Path::new(&path), &target).map(|p| p.to_string_lossy().into_owned())).await
 }
+
+#[tauri::command]
+pub async fn move_to_trash(paths: Vec<String>) -> FsResult<()> {
+    blocking(move || {
+        let failures: Vec<String> = paths
+            .iter()
+            .filter_map(|p| fs_core::ops::move_to_trash(Path::new(p)).err().map(|e| format!("“{}”: {e}", display_name(p))))
+            .collect();
+        match failures.as_slice() {
+            [] => Ok(()),
+            [one] => Err(FsError::Io(format!("Couldn't move {one}"))),
+            [first, rest @ ..] => Err(FsError::Io(format!("Couldn't move {first} (and {} more)", rest.len()))),
+        }
+    })
+    .await
+}
+
+fn display_name(path: &str) -> String {
+    Path::new(path).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| path.to_string())
+}

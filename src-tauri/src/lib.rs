@@ -35,6 +35,7 @@ pub fn run() {
             commands::reveal_in_finder,
             commands::drag_out,
             commands::convert_file,
+            commands::move_to_trash,
             commands::quicklook_show,
             commands::quicklook_update,
             commands::quicklook_close,

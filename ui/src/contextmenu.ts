@@ -32,6 +32,7 @@ export function showRowMenu(id: PaneId, entry: FileEntry) {
     { text: "Rename", enabled: single, action: () => s.startRename(id, entry.path) },
     { text: "Add to Sidebar", enabled: single && entry.isDir, action: () => s.addFavorite(entry.path) },
     { text: "Show in Finder", action: () => api.revealInFinder(selected.map((e) => e.path)) },
+    { text: "Move to Trash", action: () => s.trashSelection(id) },
     ...(targets.length
       ? ["-" as const, { text: "Convert to", items: targets.map((t) => ({ text: `.${t}`, action: () => convertEntries(id, selected, t) })) }]
       : []),

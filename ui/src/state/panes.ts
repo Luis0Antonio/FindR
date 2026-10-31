@@ -113,6 +113,7 @@ interface AppState {
   cancelRename: (id: PaneId) => void;
   commitRename: (id: PaneId, newName: string) => Promise<FsError | null>;
   createFolder: (id: PaneId) => Promise<void>;
+  trashSelection: (id: PaneId) => Promise<void>;
   addFavorite: (path: string) => void;
   removeFavorite: (path: string) => void;
   moveFavorite: (path: string, toIndex: number) => void;
@@ -495,6 +496,26 @@ export const useApp = create<AppState>((set, get) => ({
     } catch (e) {
       get().patchPane(id, { error: toFsError(e) });
     }
+  },
+
+  trashSelection: async (id) => {
+    const pane = get().panes[id];
+    const visible = visibleEntries(pane);
+    const doomed = visible.filter((e) => pane.selection.has(e.path)).map((e) => e.path);
+    if (!doomed.length) return;
+    const lastIndex = visible.findIndex((e) => e.path === doomed[doomed.length - 1]);
+    const next = visible.slice(lastIndex + 1).find((e) => !pane.selection.has(e.path)) ?? [...visible.slice(0, lastIndex)].reverse().find((e) => !pane.selection.has(e.path));
+    try {
+      await api.moveToTrash(doomed);
+    } catch (e) {
+      set({ notice: toFsError(e).message });
+    }
+    await get().reload(id);
+    const other: PaneId = id === "left" ? "right" : "left";
+    if (get().splitEnabled && get().panes[other].path === pane.path) get().reload(other);
+    const stillThere = next && visibleEntries(get().panes[id]).some((e) => e.path === next.path);
+    if (stillThere) get().selectOnly(id, next.path);
+    else get().clearSelection(id);
   },
 
   addFavorite: (path) => {
