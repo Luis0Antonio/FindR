@@ -1,4 +1,5 @@
 mod commands;
+mod convert;
 mod icon_protocol;
 mod macos;
 mod search;
@@ -33,6 +34,7 @@ pub fn run() {
             commands::volume_of,
             commands::reveal_in_finder,
             commands::drag_out,
+            commands::convert_file,
             commands::quicklook_show,
             commands::quicklook_update,
             commands::quicklook_close,

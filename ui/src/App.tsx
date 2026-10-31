@@ -14,6 +14,7 @@ export function App() {
   const ready = useApp((s) => s.ready);
   const goToOpen = useApp((s) => s.goToOpen);
   const notice = useApp((s) => s.notice);
+  const activity = useApp((s) => s.activity);
   const split = useApp((s) => s.splitEnabled);
   const ratio = useApp((s) => s.splitRatio);
   useEffect(() => {
@@ -55,6 +56,11 @@ export function App() {
       </main>
       {goToOpen && <GoToFolder />}
       <ConflictDialog />
+      {activity && !notice && (
+        <div className="notice activity" role="status">
+          <span>{activity}</span>
+        </div>
+      )}
       {notice && (
         <div className="notice" role="alert">
           <span>{notice}</span>

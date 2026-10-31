@@ -61,6 +61,7 @@ export const api = {
   moveItems: (sources: string[], targetDir: string, copy: boolean, policy: ConflictPolicy | null, opId: string) =>
     invoke<OpResult>("move_items", { sources, targetDir, copy, policy, opId }),
   volumeOf: (path: string) => invoke<number>("volume_of", { path }),
+  convertFile: (path: string, target: string) => invoke<string>("convert_file", { path, target }),
   dragOut: (paths: string[]) => invoke<void>("drag_out", { paths }),
   revealInFinder: (paths: string[]) => invoke<void>("reveal_in_finder", { paths }),
 };

@@ -390,7 +390,7 @@ mod move_tests {
 }
 
 // The default macOS method scripts Finder, which needs Automation permission; NSFileManager doesn't.
-fn move_to_trash(path: &Path) -> Result<(), trash::Error> {
+pub fn move_to_trash(path: &Path) -> Result<(), trash::Error> {
     let mut ctx = trash::TrashContext::default();
     #[cfg(target_os = "macos")]
     {

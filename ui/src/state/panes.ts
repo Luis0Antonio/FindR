@@ -74,6 +74,7 @@ interface AppState {
   missingFavorites: Set<string>;
   conflictPrompt: ConflictPrompt | null;
   notice: string | null;
+  activity: string | null;
   progress: { done: number; total: number } | null;
 
   init: () => Promise<void>;
@@ -145,6 +146,7 @@ export const useApp = create<AppState>((set, get) => ({
   missingFavorites: new Set(),
   conflictPrompt: null,
   notice: null,
+  activity: null,
   progress: null,
 
   init: async () => {

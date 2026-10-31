@@ -1,15 +1,20 @@
-import { Menu } from "@tauri-apps/api/menu";
+import { Menu, type MenuItemOptions, type SubmenuOptions } from "@tauri-apps/api/menu";
 import { api, type FileEntry } from "./api";
 import { useApp, type PaneId } from "./state/panes";
 import { visibleEntries } from "./state/visible";
 import { isQuickLookOpen, toggleQuickLook } from "./quicklook";
+import { convertEntries, convertTargets } from "./convert";
 
-type Item = { text: string; action: () => void; enabled?: boolean } | "-";
+type Item = { text: string; action: () => void; enabled?: boolean } | { text: string; items: Item[] } | "-";
+
+function toMenuItem(i: Item): MenuItemOptions | SubmenuOptions | { item: "Separator" } {
+  if (i === "-") return { item: "Separator" };
+  if ("items" in i) return { text: i.text, items: i.items.map(toMenuItem) as SubmenuOptions["items"] };
+  return { text: i.text, enabled: i.enabled ?? true, action: i.action };
+}
 
 async function popup(items: Item[]) {
-  const menu = await Menu.new({
-    items: items.map((i) => (i === "-" ? { item: "Separator" as const } : { text: i.text, enabled: i.enabled ?? true, action: i.action })),
-  });
+  const menu = await Menu.new({ items: items.map(toMenuItem) });
   await menu.popup();
 }
 
@@ -19,6 +24,7 @@ export function showRowMenu(id: PaneId, entry: FileEntry) {
   const pane = useApp.getState().panes[id];
   const selected = visibleEntries(pane).filter((e) => pane.selection.has(e.path));
   const single = selected.length === 1;
+  const targets = convertTargets(selected);
   popup([
     { text: "Open", action: () => s.openEntries(id, selected) },
     { text: "Quick Look", action: () => !isQuickLookOpen() && toggleQuickLook() },
@@ -26,6 +32,9 @@ export function showRowMenu(id: PaneId, entry: FileEntry) {
     { text: "Rename", enabled: single, action: () => s.startRename(id, entry.path) },
     { text: "Add to Sidebar", enabled: single && entry.isDir, action: () => s.addFavorite(entry.path) },
     { text: "Show in Finder", action: () => api.revealInFinder(selected.map((e) => e.path)) },
+    ...(targets.length
+      ? ["-" as const, { text: "Convert to", items: targets.map((t) => ({ text: `.${t}`, action: () => convertEntries(id, selected, t) })) }]
+      : []),
     "-",
     { text: "New Folder", action: () => s.createFolder(id) },
   ]);

@@ -1,0 +1,4 @@
+[env]
+# LAME's configure script links test programs with plain `cc`, which defaults to the Command Line Tools SDK;
+# on this machine that SDK is newer than its linker understands. Xcode's SDK is the one rustc already uses.
+SDKROOT = { value = "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk", force = false }

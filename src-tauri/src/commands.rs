@@ -122,3 +122,8 @@ pub async fn move_items(
 pub fn volume_of(path: String) -> FsResult<u64> {
     fs_core::ops::device_of(Path::new(&path)).map_err(|e| FsError::from_io(e, &path))
 }
+
+#[tauri::command]
+pub async fn convert_file(path: String, target: String) -> FsResult<String> {
+    blocking(move || crate::convert::convert_file(Path::new(&path), &target).map(|p| p.to_string_lossy().into_owned())).await
+}
