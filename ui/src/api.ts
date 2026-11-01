@@ -39,6 +39,7 @@ export interface Settings {
   splitRatio: number;
   showHidden: boolean;
   sidebarHidden: boolean;
+  sidebarWidth: number;
   panes: Record<"left" | "right", PaneSettings>;
 }
 

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { startSettingsPersistence, useApp } from "./state/panes";
 import { Pane } from "./components/Pane";
-import { Sidebar } from "./components/Sidebar";
+import { Sidebar, SidebarResizer } from "./components/Sidebar";
 import { Divider } from "./components/Divider";
 import { GoToFolder } from "./components/GoToFolder";
 import { ConflictDialog } from "./components/ConflictDialog";
@@ -45,7 +45,12 @@ export function App() {
   if (!ready) return null;
   return (
     <div className={`app${sidebarHidden ? " sidebar-hidden" : ""}`}>
-      {!sidebarHidden && <Sidebar />}
+      {!sidebarHidden && (
+        <>
+          <Sidebar />
+          <SidebarResizer />
+        </>
+      )}
       <main className="panes">
         <Pane id="left" grow={split ? ratio : 1} />
         {split && (

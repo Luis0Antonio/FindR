@@ -2,6 +2,7 @@ import { iconUrl } from "../api";
 import { showFavoriteMenu } from "../contextmenu";
 import { beginDrag, favoriteSource } from "../dnd";
 import { baseName } from "../format";
+import { useState } from "react";
 import { useApp } from "../state/panes";
 
 export function Sidebar() {
@@ -9,13 +10,14 @@ export function Sidebar() {
   const missing = useApp((s) => s.missingFavorites);
   const volumes = useApp((s) => s.volumes);
   const current = useApp((s) => s.panes[s.activePane].path);
+  const width = useApp((s) => s.sidebarWidth);
   const go = (path: string) => {
     const s = useApp.getState();
     if (s.missingFavorites.has(path)) showFavoriteMenu(path);
     else s.navigate(s.activePane, path);
   };
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" style={{ width }}>
       <div className="sidebar-top" data-tauri-drag-region />
       <div className="sidebar-scroll">
         <div className="sidebar-section">Favorites</div>
@@ -55,5 +57,26 @@ export function Sidebar() {
         ))}
       </div>
     </aside>
+  );
+}
+
+export function SidebarResizer() {
+  const [dragging, setDragging] = useState(false);
+  return (
+    <div
+      className={`sidebar-resizer${dragging ? " dragging" : ""}`}
+      onPointerDown={(e) => {
+        e.preventDefault();
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setDragging(true);
+      }}
+      onPointerMove={(e) => {
+        if (!dragging) return;
+        const left = e.currentTarget.previousElementSibling!.getBoundingClientRect().left;
+        useApp.getState().setSidebarWidth(e.clientX - left);
+      }}
+      onPointerUp={() => setDragging(false)}
+      onPointerCancel={() => setDragging(false)}
+    />
   );
 }

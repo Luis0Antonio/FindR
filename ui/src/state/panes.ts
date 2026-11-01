@@ -9,6 +9,8 @@ export type SortDir = "asc" | "desc";
 
 const MIN_ITEM = 16;
 const MAX_ITEM = 64;
+const MIN_SIDEBAR = 150;
+const MAX_SIDEBAR = 320;
 
 export interface PaneState {
   path: string;
@@ -67,6 +69,7 @@ interface AppState {
   activePane: PaneId;
   showHidden: boolean;
   sidebarHidden: boolean;
+  sidebarWidth: number;
   favorites: string[];
   home: string;
   ready: boolean;
@@ -107,6 +110,7 @@ interface AppState {
   clearKinds: (id: PaneId) => void;
   toggleHidden: () => void;
   toggleSidebar: () => void;
+  setSidebarWidth: (width: number) => void;
   runSearch: (id: PaneId) => Promise<void>;
   stopSearch: (id: PaneId) => void;
   onSearchBatch: (batch: SearchBatch) => void;
@@ -142,6 +146,7 @@ export const useApp = create<AppState>((set, get) => ({
   activePane: "left",
   showHidden: false,
   sidebarHidden: false,
+  sidebarWidth: 200,
   favorites: [],
   home: "/",
   ready: false,
@@ -170,6 +175,7 @@ export const useApp = create<AppState>((set, get) => ({
       splitRatio: saved?.splitRatio ?? 0.5,
       showHidden: saved?.showHidden ?? false,
       sidebarHidden: saved?.sidebarHidden ?? false,
+      sidebarWidth: saved?.sidebarWidth ?? 200,
       favorites: saved?.favorites ?? [home, `${home}/Desktop`, `${home}/Documents`, `${home}/Downloads`],
       ready: true,
     });
@@ -388,6 +394,7 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   toggleSidebar: () => set({ sidebarHidden: !get().sidebarHidden }),
+  setSidebarWidth: (width) => set({ sidebarWidth: Math.round(Math.min(MAX_SIDEBAR, Math.max(MIN_SIDEBAR, width))) }),
 
   toggleHidden: () => {
     set({ showHidden: !get().showHidden });
@@ -571,6 +578,7 @@ export function startSettingsPersistence() {
       splitRatio: s.splitRatio,
       showHidden: s.showHidden,
       sidebarHidden: s.sidebarHidden,
+      sidebarWidth: s.sidebarWidth,
       panes: { left: pane(s.panes.left), right: pane(s.panes.right) },
     };
     const text = JSON.stringify(settings);

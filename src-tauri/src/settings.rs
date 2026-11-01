@@ -25,6 +25,8 @@ pub struct Settings {
     pub show_hidden: bool,
     #[serde(default)]
     pub sidebar_hidden: bool,
+    #[serde(default)]
+    pub sidebar_width: Option<f64>,
     pub panes: HashMap<String, PaneSettings>,
 }
 
