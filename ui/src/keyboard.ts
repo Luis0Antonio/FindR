@@ -17,6 +17,7 @@ export function handleKeyDown(e: KeyboardEvent) {
   if (cmd && e.shiftKey && e.code === "KeyS") s.toggleSplit();
   else if (cmd && e.code === "Backslash") s.openRightPane();
   else if (cmd && e.code === "KeyW") s.closePane(id);
+  else if (cmd && !e.shiftKey && e.code === "KeyB") s.toggleSidebar();
   else if (cmd && e.key === "Backspace") s.trashSelection(id);
   else if (e.key === "Tab" && !cmd) {
     if (s.splitEnabled) s.setActive(id === "left" ? "right" : "left");

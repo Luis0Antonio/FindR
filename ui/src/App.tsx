@@ -17,6 +17,7 @@ export function App() {
   const activity = useApp((s) => s.activity);
   const split = useApp((s) => s.splitEnabled);
   const ratio = useApp((s) => s.splitRatio);
+  const sidebarHidden = useApp((s) => s.sidebarHidden);
   useEffect(() => {
     useApp.getState().init().then(() => {
       startSettingsPersistence();
@@ -44,7 +45,7 @@ export function App() {
   if (!ready) return null;
   return (
     <div className="app">
-      <Sidebar />
+      {!sidebarHidden && <Sidebar />}
       <main className="panes">
         <Pane id="left" grow={split ? ratio : 1} />
         {split && (

@@ -23,6 +23,8 @@ pub struct Settings {
     pub split_enabled: bool,
     pub split_ratio: f64,
     pub show_hidden: bool,
+    #[serde(default)]
+    pub sidebar_hidden: bool,
     pub panes: HashMap<String, PaneSettings>,
 }
 

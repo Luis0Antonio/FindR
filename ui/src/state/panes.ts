@@ -66,6 +66,7 @@ interface AppState {
   splitRatio: number;
   activePane: PaneId;
   showHidden: boolean;
+  sidebarHidden: boolean;
   favorites: string[];
   home: string;
   ready: boolean;
@@ -105,6 +106,7 @@ interface AppState {
   toggleKind: (id: PaneId, kind: FileKind) => void;
   clearKinds: (id: PaneId) => void;
   toggleHidden: () => void;
+  toggleSidebar: () => void;
   runSearch: (id: PaneId) => Promise<void>;
   stopSearch: (id: PaneId) => void;
   onSearchBatch: (batch: SearchBatch) => void;
@@ -139,6 +141,7 @@ export const useApp = create<AppState>((set, get) => ({
   splitRatio: 0.5,
   activePane: "left",
   showHidden: false,
+  sidebarHidden: false,
   favorites: [],
   home: "/",
   ready: false,
@@ -166,6 +169,7 @@ export const useApp = create<AppState>((set, get) => ({
       splitEnabled: saved?.splitEnabled ?? false,
       splitRatio: saved?.splitRatio ?? 0.5,
       showHidden: saved?.showHidden ?? false,
+      sidebarHidden: saved?.sidebarHidden ?? false,
       favorites: saved?.favorites ?? [home, `${home}/Desktop`, `${home}/Documents`, `${home}/Downloads`],
       ready: true,
     });
@@ -383,6 +387,8 @@ export const useApp = create<AppState>((set, get) => ({
     if (get().panes[id].recursive) get().runSearch(id);
   },
 
+  toggleSidebar: () => set({ sidebarHidden: !get().sidebarHidden }),
+
   toggleHidden: () => {
     set({ showHidden: !get().showHidden });
     for (const id of ["left", "right"] as PaneId[]) {
@@ -564,6 +570,7 @@ export function startSettingsPersistence() {
       splitEnabled: s.splitEnabled,
       splitRatio: s.splitRatio,
       showHidden: s.showHidden,
+      sidebarHidden: s.sidebarHidden,
       panes: { left: pane(s.panes.left), right: pane(s.panes.right) },
     };
     const text = JSON.stringify(settings);
