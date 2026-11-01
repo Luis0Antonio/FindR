@@ -44,7 +44,7 @@ export function App() {
   }, []);
   if (!ready) return null;
   return (
-    <div className="app">
+    <div className={`app${sidebarHidden ? " sidebar-hidden" : ""}`}>
       {!sidebarHidden && <Sidebar />}
       <main className="panes">
         <Pane id="left" grow={split ? ratio : 1} />

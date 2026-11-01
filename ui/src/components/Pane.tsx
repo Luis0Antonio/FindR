@@ -3,7 +3,7 @@ import { api } from "../api";
 import { useApp, type PaneId } from "../state/panes";
 import { visibleEntries } from "../state/visible";
 import { FileList } from "./FileList";
-import { Toolbar } from "./Toolbar";
+import { Breadcrumb, Toolbar } from "./Toolbar";
 
 export function Pane({ id, grow }: { id: PaneId; grow: number }) {
   const pane = useApp((s) => s.panes[id]);
@@ -29,6 +29,7 @@ export function Pane({ id, grow }: { id: PaneId; grow: number }) {
         <FileList id={id} pane={pane} entries={entries} />
       )}
       <div className="statusbar">
+        <Breadcrumb id={id} path={pane.path} />
         <span>
           {pane.selection.size > 0 ? `${pane.selection.size} of ` : ""}
           {entries.length} {entries.length === 1 ? "item" : "items"}
