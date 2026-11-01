@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { iconUrl, type FileEntry } from "../api";
+import { iconUrl, type Column, type FileEntry } from "../api";
 import { formatDate, formatSize, kindLabel } from "../format";
 import type { PaneId } from "../state/panes";
 import { RenameEditor } from "./RenameEditor";
@@ -12,11 +12,12 @@ interface Props {
   selected: boolean;
   cursor: boolean;
   folderColumn: string | null;
+  columns: Column[];
   paneId: PaneId;
   renaming: boolean;
 }
 
-export const FileRow = memo(function FileRow({ entry, top, height, iconSize, selected, cursor, folderColumn, paneId, renaming }: Props) {
+export const FileRow = memo(function FileRow({ entry, top, height, iconSize, selected, cursor, folderColumn, columns, paneId, renaming }: Props) {
   return (
     <div
       className={`row${selected ? " selected" : ""}${cursor ? " cursor" : ""}${entry.isHidden ? " hidden-entry" : ""}`}
@@ -29,9 +30,11 @@ export const FileRow = memo(function FileRow({ entry, top, height, iconSize, sel
         {renaming ? <RenameEditor id={paneId} entry={entry} /> : <span className="label">{entry.name}</span>}
       </div>
       {folderColumn != null && <div className="cell folder">{folderColumn}</div>}
-      <div className="cell date">{formatDate(entry.modified)}</div>
-      <div className="cell kind">{kindLabel(entry)}</div>
-      <div className="cell size">{formatSize(entry)}</div>
+      {columns.map((c) => {
+        if (c === "kind") return <div key={c} className="cell kind">{kindLabel(entry)}</div>;
+        if (c === "size") return <div key={c} className="cell size">{formatSize(entry)}</div>;
+        return <div key={c} className="cell date">{formatDate(entry[c])}</div>;
+      })}
     </div>
   );
 });

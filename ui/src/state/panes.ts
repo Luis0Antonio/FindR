@@ -1,14 +1,16 @@
 import { create } from "zustand";
-import { api, toFsError, type ConflictPolicy, type FileEntry, type FileKind, type FsError, type SearchBatch, type Settings, type Volume } from "../api";
+import { api, toFsError, type Column, type ConflictPolicy, type FileEntry, type FileKind, type FsError, type SearchBatch, type Settings, type Volume } from "../api";
 import { parentOf } from "../format";
 import { visibleEntries } from "./visible";
 
 export type PaneId = "left" | "right";
-export type SortKey = "name" | "modified" | "kind" | "size";
+export type SortKey = "name" | "modified" | "created" | "kind" | "size";
 export type SortDir = "asc" | "desc";
 
 const MIN_ITEM = 16;
 const MAX_ITEM = 64;
+export const ALL_COLUMNS: Column[] = ["modified", "created", "kind", "size"];
+const DEFAULT_COLUMNS: Column[] = ["modified", "kind", "size"];
 const MIN_SIDEBAR = 150;
 const MAX_SIDEBAR = 320;
 
@@ -70,6 +72,8 @@ interface AppState {
   showHidden: boolean;
   sidebarHidden: boolean;
   sidebarWidth: number;
+  columns: Column[];
+  settingsOpen: boolean;
   favorites: string[];
   home: string;
   ready: boolean;
@@ -111,6 +115,8 @@ interface AppState {
   toggleHidden: () => void;
   toggleSidebar: () => void;
   setSidebarWidth: (width: number) => void;
+  toggleColumn: (column: Column) => void;
+  setSettingsOpen: (open: boolean) => void;
   runSearch: (id: PaneId) => Promise<void>;
   stopSearch: (id: PaneId) => void;
   onSearchBatch: (batch: SearchBatch) => void;
@@ -147,6 +153,8 @@ export const useApp = create<AppState>((set, get) => ({
   showHidden: false,
   sidebarHidden: false,
   sidebarWidth: 200,
+  columns: DEFAULT_COLUMNS,
+  settingsOpen: false,
   favorites: [],
   home: "/",
   ready: false,
@@ -175,6 +183,7 @@ export const useApp = create<AppState>((set, get) => ({
       showHidden: saved?.showHidden ?? false,
       sidebarHidden: saved?.sidebarHidden ?? false,
       sidebarWidth: saved?.sidebarWidth ?? 200,
+      columns: saved?.columns ?? DEFAULT_COLUMNS,
       favorites: saved?.favorites ?? [home, `${home}/Desktop`, `${home}/Documents`, `${home}/Downloads`],
       ready: true,
     });
@@ -396,6 +405,11 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   toggleSidebar: () => set({ sidebarHidden: !get().sidebarHidden }),
+  toggleColumn: (column) => {
+    const columns = get().columns;
+    set({ columns: columns.includes(column) ? columns.filter((c) => c !== column) : ALL_COLUMNS.filter((c) => c === column || columns.includes(c)) });
+  },
+  setSettingsOpen: (open) => set({ settingsOpen: open }),
   setSidebarWidth: (width) => set({ sidebarWidth: Math.round(Math.min(MAX_SIDEBAR, Math.max(MIN_SIDEBAR, width))) }),
 
   toggleHidden: () => {
@@ -581,6 +595,7 @@ export function startSettingsPersistence() {
       showHidden: s.showHidden,
       sidebarHidden: s.sidebarHidden,
       sidebarWidth: s.sidebarWidth,
+      columns: s.columns,
       panes: { left: pane(s.panes.left), right: pane(s.panes.right) },
     };
     const text = JSON.stringify(settings);

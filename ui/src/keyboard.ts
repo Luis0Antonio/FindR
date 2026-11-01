@@ -15,6 +15,10 @@ function typeIntoSearch(id: PaneId, text: string) {
 }
 
 export function handleKeyDown(e: KeyboardEvent) {
+  if (useApp.getState().settingsOpen) {
+    if (e.key === "Escape") useApp.getState().setSettingsOpen(false);
+    return;
+  }
   if (e.metaKey && !e.shiftKey && e.code === "KeyB") {
     e.preventDefault();
     useApp.getState().toggleSidebar();

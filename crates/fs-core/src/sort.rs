@@ -9,6 +9,7 @@ use crate::entry::FileEntry;
 pub enum SortKey {
     Name,
     Modified,
+    Created,
     Kind,
     Size,
 }
@@ -40,12 +41,15 @@ pub fn sort_entries(entries: &mut [FileEntry], key: SortKey, dir: SortDir, folde
         }
         let primary = match key {
             SortKey::Name => natural_cmp(&a.name, &b.name),
-            SortKey::Modified => match (a.modified, b.modified) {
-                (Some(x), Some(y)) => x.cmp(&y),
-                (Some(_), None) => return Ordering::Less,
-                (None, Some(_)) => return Ordering::Greater,
-                (None, None) => Ordering::Equal,
-            },
+            SortKey::Modified | SortKey::Created => {
+                let date = |e: &FileEntry| if key == SortKey::Modified { e.modified } else { e.created };
+                match (date(a), date(b)) {
+                    (Some(x), Some(y)) => x.cmp(&y),
+                    (Some(_), None) => return Ordering::Less,
+                    (None, Some(_)) => return Ordering::Greater,
+                    (None, None) => Ordering::Equal,
+                }
+            }
             SortKey::Kind => kind_key(a).cmp(&kind_key(b)),
             SortKey::Size => a.size.unwrap_or(0).cmp(&b.size.unwrap_or(0)),
         };

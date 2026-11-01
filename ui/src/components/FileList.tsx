@@ -10,12 +10,13 @@ export function rowHeight(itemSize: number) {
   return Math.max(22, itemSize + 6);
 }
 
-const COLUMNS: { key: SortKey; label: string; cls: string }[] = [
-  { key: "name", label: "Name", cls: "name" },
-  { key: "modified", label: "Date Modified", cls: "date" },
-  { key: "kind", label: "Kind", cls: "kind" },
-  { key: "size", label: "Size", cls: "size" },
-];
+export const COLUMN_INFO: Record<SortKey, { label: string; cls: string; width: string }> = {
+  name: { label: "Name", cls: "name", width: "minmax(120px, 1fr)" },
+  modified: { label: "Date Modified", cls: "date", width: "minmax(0, 170px)" },
+  created: { label: "Date Created", cls: "date", width: "minmax(0, 170px)" },
+  kind: { label: "Kind", cls: "kind", width: "minmax(0, 130px)" },
+  size: { label: "Size", cls: "size", width: "minmax(0, 90px)" },
+};
 
 function relativeFolder(root: string, path: string): string {
   const dir = path.slice(0, path.lastIndexOf("/")) || "/";
@@ -28,6 +29,8 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
   const scrollRef = useRef<HTMLDivElement>(null);
   const height = rowHeight(pane.itemSize);
   const showFolder = pane.searchResults != null;
+  const columns = useApp((s) => s.columns);
+  const grid = [COLUMN_INFO.name.width, ...(showFolder ? ["minmax(60px, 0.7fr)"] : []), ...columns.map((c) => COLUMN_INFO[c].width)].join(" ");
   const virtualizer = useVirtualizer({
     count: entries.length,
     getScrollElement: () => scrollRef.current,
@@ -80,15 +83,19 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
     else showBackgroundMenu(id);
   };
 
+  const headerCell = (key: SortKey) => (
+    <div key={key} className={`cell ${COLUMN_INFO[key].cls}${pane.sortKey === key ? " sorted" : ""}`} onClick={() => useApp.getState().setSort(id, key)}>
+      {COLUMN_INFO[key].label}
+      {pane.sortKey === key && <span className="sort-arrow">{pane.sortDir === "asc" ? "▲" : "▼"}</span>}
+    </div>
+  );
+
   return (
-    <div className={`file-list${showFolder ? " with-folder" : ""}`}>
+    <div className="file-list" style={{ "--columns": grid } as React.CSSProperties}>
       <div className="header row">
-        {COLUMNS.map((c) => (
-          <div key={c.key} className={`cell ${c.cls}${pane.sortKey === c.key ? " sorted" : ""}`} onClick={() => useApp.getState().setSort(id, c.key)}>
-            {c.label}
-            {pane.sortKey === c.key && <span className="sort-arrow">{pane.sortDir === "asc" ? "▲" : "▼"}</span>}
-          </div>
-        )).flatMap((el, i) => (i === 1 && showFolder ? [<div key="folder" className="cell folder">Folder</div>, el] : [el]))}
+        {headerCell("name")}
+        {showFolder && <div className="cell folder">Folder</div>}
+        {columns.map(headerCell)}
       </div>
       <div className="scroll" ref={scrollRef} onPointerDown={onPointerDown} onClick={onClick} onDoubleClick={onDoubleClick} onContextMenu={onContextMenu} data-pane-scroll={id} data-drop-target={pane.path}>
         <div className="rows" style={{ height: Math.max(virtualizer.getTotalSize(), 1) }}>
@@ -104,6 +111,7 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
                 selected={pane.selection.has(e.path)}
                 cursor={pane.cursor === e.path}
                 folderColumn={showFolder ? relativeFolder(pane.path, e.path) : null}
+                columns={columns}
                 paneId={id}
                 renaming={pane.renaming === e.path}
               />

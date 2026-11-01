@@ -27,11 +27,13 @@ export function toFsError(e: unknown): FsError {
 
 export interface PaneSettings {
   path: string;
-  sortKey: "name" | "modified" | "kind" | "size";
+  sortKey: "name" | "modified" | "created" | "kind" | "size";
   sortDir: "asc" | "desc";
   foldersFirst: boolean;
   itemSize: number;
 }
+
+export type Column = "modified" | "created" | "kind" | "size";
 
 export interface OpenTarget {
   path: string;
@@ -45,6 +47,7 @@ export interface Settings {
   showHidden: boolean;
   sidebarHidden: boolean;
   sidebarWidth: number;
+  columns: Column[];
   panes: Record<"left" | "right", PaneSettings>;
 }
 

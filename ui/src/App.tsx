@@ -5,6 +5,7 @@ import { Sidebar, SidebarResizer } from "./components/Sidebar";
 import { Divider } from "./components/Divider";
 import { GoToFolder } from "./components/GoToFolder";
 import { ConflictDialog } from "./components/ConflictDialog";
+import { Settings } from "./components/Settings";
 import { handleKeyDown } from "./keyboard";
 import { startQuickLookSync } from "./quicklook";
 import { listen } from "@tauri-apps/api/event";
@@ -18,6 +19,7 @@ export function App() {
   const split = useApp((s) => s.splitEnabled);
   const ratio = useApp((s) => s.splitRatio);
   const sidebarHidden = useApp((s) => s.sidebarHidden);
+  const settingsOpen = useApp((s) => s.settingsOpen);
   useEffect(() => {
     useApp.getState().init().then(() => {
       startSettingsPersistence();
@@ -32,6 +34,10 @@ export function App() {
     const unlisten = [
       listen<SearchBatch>("search://results", (e) => useApp.getState().onSearchBatch(e.payload)),
       listen<DirChanged>("dir://changed", (e) => useApp.getState().onDirChanged(e.payload.path)),
+      listen("menu://settings", () => {
+        const s = useApp.getState();
+        s.setSettingsOpen(!s.settingsOpen);
+      }),
       listen<OpenTarget>("link://open", (e) => {
         const s = useApp.getState();
         s.navigate(s.activePane, e.payload.path, { select: e.payload.select ?? undefined });
@@ -65,6 +71,7 @@ export function App() {
         )}
       </main>
       {goToOpen && <GoToFolder />}
+      {settingsOpen && <Settings />}
       <ConflictDialog />
       {activity && !notice && (
         <div className="notice activity" role="status">

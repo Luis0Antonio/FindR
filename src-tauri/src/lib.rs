@@ -7,7 +7,8 @@ mod search;
 mod settings;
 mod watcher;
 
-use tauri::menu::{Menu, MenuItemKind};
+use tauri::menu::{Menu, MenuItem, MenuItemKind, PredefinedMenuItem};
+use tauri::Emitter;
 
 pub fn run() {
     tauri::Builder::default()
@@ -19,8 +20,13 @@ pub fn run() {
         })
         .setup(|app| {
             macos::quicklook::init(app.handle());
-            app.set_menu(menu_without_close_window(app.handle())?)?;
+            app.set_menu(app_menu(app.handle())?)?;
             Ok(())
+        })
+        .on_menu_event(|app, event| {
+            if event.id() == "settings" {
+                let _ = app.emit("menu://settings", ());
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::list_dir,
@@ -58,8 +64,12 @@ pub fn run() {
 }
 
 // Cmd+W closes the active pane, so the native Close Window item must not claim it.
-fn menu_without_close_window(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
+fn app_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
     let menu = Menu::default(app)?;
+    if let Some(MenuItemKind::Submenu(app_submenu)) = menu.items()?.first() {
+        let settings = MenuItem::with_id(app, "settings", "Settings…", true, Some("CmdOrCtrl+,"))?;
+        app_submenu.insert_items(&[&settings, &PredefinedMenuItem::separator(app)?], 2)?;
+    }
     for item in menu.items()? {
         let MenuItemKind::Submenu(sub) = &item else { continue };
         if sub.text()? == "File" {

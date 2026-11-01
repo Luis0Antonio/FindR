@@ -12,11 +12,15 @@ export function compareEntries(a: FileEntry, b: FileEntry, key: SortKey, dir: So
       c = collator.compare(a.name, b.name);
       break;
     case "modified":
-      if (a.modified == null || b.modified == null) {
-        if (a.modified != null) return -1;
-        if (b.modified != null) return 1;
-      } else c = a.modified - b.modified;
+    case "created": {
+      const x = a[key];
+      const y = b[key];
+      if (x == null || y == null) {
+        if (x != null) return -1;
+        if (y != null) return 1;
+      } else c = x - y;
       break;
+    }
     case "kind":
       c = collator.compare(kindLabel(a), kindLabel(b)) || collator.compare(a.ext ?? "", b.ext ?? "");
       break;
