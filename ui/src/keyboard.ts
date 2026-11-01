@@ -1,10 +1,17 @@
-import { activePaneState, useApp } from "./state/panes";
+import { activePaneState, useApp, type PaneId } from "./state/panes";
 import { focusSearch } from "./components/Toolbar";
 import { closeQuickLook, isQuickLookOpen, toggleQuickLook } from "./quicklook";
 
 function inTextField(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
   return !!el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+}
+
+function typeIntoSearch(id: PaneId, text: string) {
+  useApp.getState().setNameFilter(id, text);
+  const input = document.querySelector<HTMLInputElement>(`input[data-search="${id}"]`);
+  input?.focus();
+  requestAnimationFrame(() => input?.setSelectionRange(text.length, text.length));
 }
 
 export function handleKeyDown(e: KeyboardEvent) {
@@ -42,6 +49,7 @@ export function handleKeyDown(e: KeyboardEvent) {
   else if (!cmd && e.key === " ") toggleQuickLook();
   else if (e.key === "Escape" && isQuickLookOpen()) closeQuickLook();
   else if (e.key === "Escape") s.clearSelection(id);
+  else if (!cmd && !e.ctrlKey && !e.altKey && e.key.length === 1) typeIntoSearch(id, pane.nameFilter + e.key);
   else handled = false;
 
   if (handled) e.preventDefault();
