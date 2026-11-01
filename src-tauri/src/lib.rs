@@ -1,6 +1,7 @@
 mod commands;
 mod convert;
 mod icon_protocol;
+mod links;
 mod macos;
 mod search;
 mod settings;
@@ -11,6 +12,7 @@ use tauri::menu::{Menu, MenuItemKind};
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(links::Links::default())
         .register_asynchronous_uri_scheme_protocol("icon", |_ctx, request, responder| {
             let path = request.uri().path().to_string();
             tauri::async_runtime::spawn_blocking(move || responder.respond(icon_protocol::handle(&path)));
@@ -24,7 +26,7 @@ pub fn run() {
             commands::list_dir,
             commands::open_path,
             commands::home_dir,
-            commands::startup_dir,
+            links::startup_target,
             commands::open_privacy_settings,
             commands::create_folder,
             commands::rename,
@@ -46,8 +48,13 @@ pub fn run() {
             settings::load_settings,
             settings::save_settings,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            if let tauri::RunEvent::Opened { urls } = event {
+                links::handle_opened(app, &urls);
+            }
+        });
 }
 
 // Cmd+W closes the active pane, so the native Close Window item must not claim it.

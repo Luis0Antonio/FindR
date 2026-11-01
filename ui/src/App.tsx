@@ -8,7 +8,7 @@ import { ConflictDialog } from "./components/ConflictDialog";
 import { handleKeyDown } from "./keyboard";
 import { startQuickLookSync } from "./quicklook";
 import { listen } from "@tauri-apps/api/event";
-import type { DirChanged, OpProgress, SearchBatch } from "./api";
+import type { DirChanged, OpenTarget, OpProgress, SearchBatch } from "./api";
 
 export function App() {
   const ready = useApp((s) => s.ready);
@@ -32,6 +32,10 @@ export function App() {
     const unlisten = [
       listen<SearchBatch>("search://results", (e) => useApp.getState().onSearchBatch(e.payload)),
       listen<DirChanged>("dir://changed", (e) => useApp.getState().onDirChanged(e.payload.path)),
+      listen<OpenTarget>("link://open", (e) => {
+        const s = useApp.getState();
+        s.navigate(s.activePane, e.payload.path, { select: e.payload.select ?? undefined });
+      }),
       listen<OpProgress>("op://progress", (e) =>
         useApp.setState({ progress: e.payload.doneBytes >= e.payload.totalBytes ? null : { done: e.payload.doneBytes, total: e.payload.totalBytes } }),
       ),

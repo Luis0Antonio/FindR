@@ -35,11 +35,6 @@ pub fn home_dir() -> String {
 }
 
 #[tauri::command]
-pub fn startup_dir() -> Option<String> {
-    std::env::args().skip(1).find(|a| Path::new(a).is_dir())
-}
-
-#[tauri::command]
 pub async fn reveal_in_finder(app: AppHandle, paths: Vec<String>) -> FsResult<()> {
     app.opener().reveal_items_in_dir(paths).map_err(|e| FsError::Io(e.to_string()))
 }

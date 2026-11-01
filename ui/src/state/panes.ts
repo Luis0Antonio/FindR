@@ -159,7 +159,7 @@ export const useApp = create<AppState>((set, get) => ({
   progress: null,
 
   init: async () => {
-    const [home, startup, saved] = await Promise.all([api.homeDir(), api.startupDir(), api.loadSettings().catch(() => null)]);
+    const [home, startup, saved] = await Promise.all([api.homeDir(), api.startupTarget(), api.loadSettings().catch(() => null)]);
     const pane = (id: PaneId): PaneState => {
       const ps = saved?.panes[id];
       const p = newPane(ps?.path ?? home);
@@ -167,7 +167,6 @@ export const useApp = create<AppState>((set, get) => ({
       return p;
     };
     const panes = { left: pane("left"), right: pane("right") };
-    if (startup) panes.left = { ...panes.left, path: startup, history: [startup] };
     set({
       home,
       panes,
@@ -179,7 +178,10 @@ export const useApp = create<AppState>((set, get) => ({
       favorites: saved?.favorites ?? [home, `${home}/Desktop`, `${home}/Documents`, `${home}/Downloads`],
       ready: true,
     });
-    await Promise.all([get().reload("left"), get().splitEnabled ? get().reload("right") : null]);
+    await Promise.all([
+      startup ? get().navigate("left", startup.path, { select: startup.select ?? undefined }) : get().reload("left"),
+      get().splitEnabled ? get().reload("right") : null,
+    ]);
     get().refreshFavorites();
     get().loadVolumes();
     api.watchDir("volumes", "/Volumes");

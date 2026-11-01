@@ -33,6 +33,11 @@ export interface PaneSettings {
   itemSize: number;
 }
 
+export interface OpenTarget {
+  path: string;
+  select: string | null;
+}
+
 export interface Settings {
   favorites: string[];
   splitEnabled: boolean;
@@ -47,7 +52,7 @@ export const api = {
   listDir: (path: string, showHidden: boolean) => invoke<FileEntry[]>("list_dir", { path, showHidden }),
   openPath: (path: string) => invoke<void>("open_path", { path }),
   homeDir: () => invoke<string>("home_dir"),
-  startupDir: () => invoke<string | null>("startup_dir"),
+  startupTarget: () => invoke<OpenTarget | null>("startup_target"),
   openPrivacySettings: () => invoke<void>("open_privacy_settings"),
   loadSettings: () => invoke<Settings | null>("load_settings"),
   saveSettings: (settings: Settings) => invoke<void>("save_settings", { settings }),
