@@ -7,8 +7,8 @@ export type PaneId = "left" | "right";
 export type SortKey = "name" | "modified" | "kind" | "size";
 export type SortDir = "asc" | "desc";
 
-export const MIN_ITEM = 16;
-export const MAX_ITEM = 64;
+const MIN_ITEM = 16;
+const MAX_ITEM = 64;
 
 export interface PaneState {
   path: string;

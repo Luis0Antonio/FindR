@@ -1,5 +1,5 @@
 import type { FileKind } from "../api";
-import { useApp, MAX_ITEM, MIN_ITEM, type PaneId } from "../state/panes";
+import { useApp, type PaneId } from "../state/panes";
 import { baseName } from "../format";
 
 const CHIPS: { kind: FileKind; label: string }[] = [
@@ -62,11 +62,6 @@ export function Toolbar({ id }: { id: PaneId }) {
             <path d="M9 6v5M6.5 8.5h5" />
           </svg>
         </button>
-        <label className="size-slider" title="Item size (⌘= / ⌘-)">
-          <span className="small-a">A</span>
-          <input type="range" min={MIN_ITEM} max={MAX_ITEM} step={1} value={pane.itemSize} onChange={(e) => s.setItemSize(id, Number(e.target.value))} />
-          <span className="big-a">A</span>
-        </label>
         <input
           className="search"
           data-search={id}

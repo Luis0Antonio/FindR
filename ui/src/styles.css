@@ -74,11 +74,6 @@ button.tb.on { background: var(--accent-soft); border-color: var(--accent); }
 .crumb:hover { background: var(--border); }
 .crumb-wrap:last-child .crumb { font-weight: 600; }
 .crumb-sep { color: var(--text-dim); padding: 0 1px; }
-.size-slider { display: flex; align-items: center; gap: 4px; color: var(--text-dim); }
-.size-slider input { width: 80px; min-width: 40px; flex-shrink: 1; }
-.size-slider { flex-shrink: 1; min-width: 0; }
-.small-a { font-size: 9px; }
-.big-a { font-size: 14px; }
 
 .header .cell { cursor: default; }
 .header .cell:hover { color: var(--text); }
