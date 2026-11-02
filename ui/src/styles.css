@@ -41,7 +41,7 @@ input { font: inherit; }
 .app { display: flex; height: 100%; }
 .panes { flex: 1; display: flex; min-width: 0; background: var(--bg); }
 
-.pane { flex: 1 1 0; container-type: inline-size; display: flex; flex-direction: column; min-width: 0; border: 2px solid transparent; }
+.pane { flex: 1 1 0; container-type: inline-size; display: flex; flex-direction: column; min-width: 0; }
 .statusbar { padding: 3px 10px 3px 6px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 11px; display: flex; gap: 12px; align-items: center; white-space: nowrap; }
 
 .pane-message { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--text-dim); padding: 24px; text-align: center; }
@@ -56,6 +56,8 @@ input { font: inherit; }
 .rows .row:nth-child(even) { background: var(--bg-alt); }
 .row.selected, .rows .row.selected:nth-child(even) { background: var(--accent); color: var(--selected-text); }
 .row.selected .cell { color: var(--selected-text); }
+.pane.inactive .row.selected, .pane.inactive .rows .row.selected:nth-child(even) { background: var(--accent-soft); color: var(--text); }
+.pane.inactive .row.selected .cell { color: var(--text); }
 .header.row { height: 26px; border-bottom: 1px solid var(--border); color: var(--text-dim); font-size: 12px; }
 .cell { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding-right: 8px; }
 .cell.date, .cell.kind, .cell.size { color: var(--text-dim); }
@@ -96,7 +98,6 @@ button.tb.on { color: var(--accent); }
 .modal-buttons { display: flex; justify-content: flex-end; gap: 8px; }
 .modal-buttons button { padding: 4px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-alt); color: var(--text); }
 .modal-buttons button.primary { background: var(--accent); border-color: var(--accent); color: white; }
-.pane.active { border-color: var(--accent); }
 
 .search-field { display: flex; align-items: center; gap: 6px; height: 30px; width: 190px; flex: 0 1 190px; min-width: 90px; padding: 0 12px; border-radius: 15px; background: var(--capsule); box-shadow: inset 0 0 0 0.5px var(--glass-edge); color: var(--text-dim); }
 .search-field:focus-within { box-shadow: inset 0 0 0 1.5px var(--accent); }

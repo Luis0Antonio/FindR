@@ -12,7 +12,7 @@ export function Pane({ id, grow }: { id: PaneId; grow: number }) {
   const progress = useApp((s) => s.progress);
   const entries = useMemo(() => visibleEntries(pane), [pane]);
   return (
-    <section className={`pane${active && split ? " active" : ""}`} style={{ flexGrow: grow }} onPointerDownCapture={() => useApp.getState().setActive(id)}>
+    <section className={`pane${!active && split ? " inactive" : ""}`} style={{ flexGrow: grow }} onPointerDownCapture={() => useApp.getState().setActive(id)}>
       <Toolbar id={id} />
       {pane.error ? (
         <div className="pane-message">
