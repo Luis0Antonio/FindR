@@ -47,6 +47,15 @@ fn render(file: &str, px: u32, source: Source) -> Option<Vec<u8>> {
     }
 }
 
+/// The list's image for a file at `px` pixels, and whether it is a content thumbnail rather than an icon.
+pub fn preview_png(file: &str, px: u32) -> Option<(Vec<u8>, bool)> {
+    let icon = || icons::icon_png(file, px).map(|png| (png, false));
+    match cache_key(file, px).1 {
+        Source::Thumbnail => icons::thumbnail_png(file, px).map(|png| (png, true)).or_else(icon),
+        Source::Icon => icon(),
+    }
+}
+
 /// `icon://localhost/<size>/<urlencoded absolute path>`, rendered at 2x for Retina.
 pub fn handle(path_and_query: &str) -> Response<Vec<u8>> {
     let mut parts = path_and_query.trim_start_matches('/').splitn(2, '/');

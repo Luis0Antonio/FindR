@@ -136,8 +136,11 @@ body.dragging-folder .sidebar-add { display: block; }
 .rows .row:has(.rename-error) { z-index: 4; overflow: visible; }
 .rows .row .cell.name:has(.rename-error) { overflow: visible; }
 
-.drag-ghost { position: fixed; left: 0; top: 0; z-index: 100; pointer-events: none; display: flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 6px; background: rgba(30, 30, 32, 0.82); color: white; font-size: 12px; max-width: 260px; white-space: nowrap; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); }
-.drag-ghost span:first-child { overflow: hidden; text-overflow: ellipsis; }
+.drag-ghost { position: fixed; left: 0; top: 0; z-index: 100; pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 6px; width: 96px; }
+.drag-preview { display: grid; place-items: center; width: 96px; height: 96px; }
+.drag-preview img { grid-area: 1 / 1; max-width: 96px; max-height: 96px; border-radius: 9px; opacity: 0.85; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.35)); }
+.drag-caption { display: flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 10px; background: rgba(30, 30, 32, 0.82); color: white; font-size: 12px; max-width: 220px; white-space: nowrap; }
+.drag-caption span:first-child { overflow: hidden; text-overflow: ellipsis; }
 .drag-badge { display: none; background: #34c759; color: white; border-radius: 8px; padding: 0 6px; font-size: 11px; font-weight: 600; }
 body.dragging, body.dragging * { cursor: default !important; }
 body.drop-invalid, body.drop-invalid * { cursor: not-allowed !important; }

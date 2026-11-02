@@ -1,10 +1,13 @@
-import { api, type FileEntry } from "./api";
+import { api, iconUrl, type FileEntry } from "./api";
 import { baseName, parentOf } from "./format";
 import { useApp, type PaneId } from "./state/panes";
 import { visibleEntries } from "./state/visible";
 import { transfer } from "./transfer";
 
 const THRESHOLD = 4;
+const PREVIEW = 96;
+/** Clockwise tilt of the front preview and the ones fanned out behind it; the native drag image mirrors these. */
+const TILTS = [-6, 5, -14];
 const SPRING_MS = 1000;
 
 type Source = { kind: "items"; paneId: PaneId; entries: FileEntry[] } | { kind: "favorite"; path: string };
@@ -136,11 +139,24 @@ export function beginDrag(ev: React.PointerEvent, makeSource: () => Source | nul
     if (!source) return false;
     ghost = document.createElement("div");
     ghost.className = "drag-ghost";
+    const preview = document.createElement("div");
+    preview.className = "drag-preview";
+    const shown = source.kind === "favorite" ? [{ path: source.path, modified: null }] : source.entries.slice(0, TILTS.length);
+    shown.forEach((e, i) => {
+      const img = document.createElement("img");
+      img.src = iconUrl(e.path, PREVIEW, e.modified);
+      img.style.transform = `rotate(${TILTS[i]}deg)`;
+      img.style.zIndex = String(TILTS.length - i);
+      preview.append(img);
+    });
+    const caption = document.createElement("div");
+    caption.className = "drag-caption";
     const label = document.createElement("span");
     label.textContent = ghostLabel(source);
     badge = document.createElement("span");
     badge.className = "drag-badge";
-    ghost.append(label, badge);
+    caption.append(label, badge);
+    ghost.append(preview, caption);
     document.body.appendChild(ghost);
     document.body.classList.add("dragging");
     if (source.kind === "items") {
@@ -166,7 +182,7 @@ export function beginDrag(ev: React.PointerEvent, makeSource: () => Source | nul
     // ⌘ starts Cmd+Tab: hand the files to macOS while this window still has the mouse, so they can be dropped in another app.
     const outside = e.clientX < 0 || e.clientY < 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight;
     if ((outside || e.metaKey) && dragOut()) return;
-    ghost!.style.transform = `translate(${e.clientX + 12}px, ${e.clientY + 10}px)`;
+    ghost!.style.transform = `translate(${e.clientX - PREVIEW / 2}px, ${e.clientY - PREVIEW / 2}px)`;
     refresh();
   };
 
