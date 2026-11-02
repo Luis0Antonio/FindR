@@ -21,7 +21,7 @@ struct Inner {
 #[derive(Default)]
 pub struct Links(Mutex<Inner>);
 
-/// Handles `rfinder://` links and files or folders opened with the app (Dock, "Open With").
+/// Handles `findr://` links and files or folders opened with the app (Dock, "Open With").
 pub fn handle_opened(app: &AppHandle, urls: &[Url]) {
     let Some(target) = urls.iter().find_map(path_for).map(|p| target_for(&p)) else { return };
     let state = app.state::<Links>();
@@ -48,8 +48,8 @@ pub fn startup_target(links: State<Links>) -> Option<OpenTarget> {
 fn path_for(url: &Url) -> Option<PathBuf> {
     match url.scheme() {
         "file" => url.to_file_path().ok(),
-        "rfinder" => {
-            // Accept rfinder:///Users/me, rfinder://Users/me and rfinder://~/Downloads alike.
+        "findr" => {
+            // Accept findr:///Users/me, findr://Users/me and findr://~/Downloads alike.
             let raw = format!("{}{}", url.host_str().unwrap_or(""), url.path());
             let decoded = percent_decode_str(&raw).decode_utf8().ok()?;
             let trimmed = decoded.trim_start_matches('/').trim_end_matches('/');

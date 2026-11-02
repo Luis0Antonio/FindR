@@ -36,7 +36,7 @@ pub fn convert_file(path: &Path, target: &str) -> FsResult<PathBuf> {
 
 fn tempfile_dir() -> FsResult<PathBuf> {
     let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos();
-    let dir = std::env::temp_dir().join(format!("rfinder-convert-{}-{nanos}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("findr-convert-{}-{nanos}", std::process::id()));
     std::fs::create_dir_all(&dir).map_err(|e| FsError::from_io(e, "Couldn't create a temporary folder"))?;
     Ok(dir)
 }

@@ -6,10 +6,10 @@
   <array>
     <dict>
       <key>CFBundleURLName</key>
-      <string>dev.softblocks.rfinder</string>
+      <string>dev.softblocks.findr</string>
       <key>CFBundleURLSchemes</key>
       <array>
-        <string>rfinder</string>
+        <string>findr</string>
       </array>
     </dict>
   </array>

@@ -1,10 +1,10 @@
 [package]
-name = "rfinder"
+name = "findr"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "rfinder_lib"
+name = "findr_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

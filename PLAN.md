@@ -67,7 +67,7 @@ Two things could sink this stack. Prove both in a throwaway Tauri app before bui
 ## 4. Project layout
 
 ```
-rfinder/
+findr/
   Cargo.toml                # workspace
   crates/
     fs-core/                # pure Rust, no Tauri, unit-tested

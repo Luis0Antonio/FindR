@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "rfinder",
+  "productName": "FindR",
   "version": "0.1.0",
-  "identifier": "dev.softblocks.rfinder",
+  "identifier": "dev.softblocks.findr",
   "build": {
     "beforeDevCommand": {
       "script": "npm run dev",
@@ -19,7 +19,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "rfinder",
+        "title": "FindR",
         "width": 1200,
         "height": 760,
         "minWidth": 640,
