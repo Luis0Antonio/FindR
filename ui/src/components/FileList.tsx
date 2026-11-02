@@ -30,6 +30,7 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
   const height = rowHeight(pane.itemSize);
   const showFolder = pane.searchResults != null;
   const columns = useApp((s) => s.columns);
+  const cutPaths = useApp((s) => (s.clipboard?.cut ? s.clipboard.paths : null));
   const grid = [COLUMN_INFO.name.width, ...(showFolder ? ["minmax(60px, 0.7fr)"] : []), ...columns.map((c) => COLUMN_INFO[c].width)].join(" ");
   const virtualizer = useVirtualizer({
     count: entries.length,
@@ -114,6 +115,7 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
                 columns={columns}
                 paneId={id}
                 renaming={pane.renaming === e.path}
+                cut={cutPaths?.includes(e.path) ?? false}
               />
             );
           })}

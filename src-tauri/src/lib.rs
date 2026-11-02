@@ -44,6 +44,8 @@ pub fn run() {
             commands::drag_out,
             commands::convert_file,
             commands::move_to_trash,
+            commands::clipboard_write_files,
+            commands::clipboard_read_files,
             commands::quicklook_show,
             commands::quicklook_update,
             commands::quicklook_close,

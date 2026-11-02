@@ -72,6 +72,8 @@ export const api = {
     invoke<OpResult>("move_items", { sources, targetDir, copy, policy, opId }),
   volumeOf: (path: string) => invoke<number>("volume_of", { path }),
   moveToTrash: (paths: string[]) => invoke<void>("move_to_trash", { paths }),
+  clipboardWriteFiles: (paths: string[]) => invoke<number>("clipboard_write_files", { paths }),
+  clipboardReadFiles: () => invoke<{ paths: string[]; changeCount: number }>("clipboard_read_files"),
   convertFile: (path: string, target: string) => invoke<string>("convert_file", { path, target }),
   dragOut: (paths: string[]) => invoke<void>("drag_out", { paths }),
   revealInFinder: (paths: string[]) => invoke<void>("reveal_in_finder", { paths }),

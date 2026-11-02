@@ -1,5 +1,6 @@
 import { activePaneState, useApp, type PaneId } from "./state/panes";
 import { focusSearch } from "./components/Toolbar";
+import { copySelection, paste } from "./clipboard";
 import { closeQuickLook, isQuickLookOpen, toggleQuickLook } from "./quicklook";
 
 function inTextField(target: EventTarget | null): boolean {
@@ -52,6 +53,9 @@ export function handleKeyDown(e: KeyboardEvent) {
   else if (cmd && (e.key === "=" || e.key === "+")) s.setItemSize(id, pane.itemSize + 4);
   else if (cmd && e.key === "-") s.setItemSize(id, pane.itemSize - 4);
   else if (cmd && !e.shiftKey && e.code === "KeyA") s.selectAll(id);
+  else if (cmd && !e.shiftKey && e.code === "KeyC") copySelection(id, false);
+  else if (cmd && !e.shiftKey && e.code === "KeyX") copySelection(id, true);
+  else if (cmd && !e.shiftKey && e.code === "KeyV") paste(id);
   else if (!cmd && e.key === "ArrowUp") s.moveCursor(id, -1, e.shiftKey);
   else if (!cmd && e.key === "ArrowDown") s.moveCursor(id, 1, e.shiftKey);
   else if (!cmd && e.key === " ") toggleQuickLook();

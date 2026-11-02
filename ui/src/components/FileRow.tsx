@@ -15,12 +15,13 @@ interface Props {
   columns: Column[];
   paneId: PaneId;
   renaming: boolean;
+  cut: boolean;
 }
 
-export const FileRow = memo(function FileRow({ entry, top, height, iconSize, selected, cursor, folderColumn, columns, paneId, renaming }: Props) {
+export const FileRow = memo(function FileRow({ entry, top, height, iconSize, selected, cursor, folderColumn, columns, paneId, renaming, cut }: Props) {
   return (
     <div
-      className={`row${selected ? " selected" : ""}${cursor ? " cursor" : ""}${entry.isHidden ? " hidden-entry" : ""}`}
+      className={`row${selected ? " selected" : ""}${cursor ? " cursor" : ""}${entry.isHidden ? " hidden-entry" : ""}${cut ? " cut" : ""}`}
       style={{ transform: `translateY(${top}px)`, height }}
       data-path={entry.path}
       data-drop-target={entry.isDir ? entry.path : undefined}

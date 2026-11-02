@@ -142,3 +142,21 @@ pub async fn move_to_trash(paths: Vec<String>) -> FsResult<()> {
 fn display_name(path: &str) -> String {
     Path::new(path).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| path.to_string())
 }
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipboardFiles {
+    paths: Vec<String>,
+    change_count: isize,
+}
+
+#[tauri::command]
+pub fn clipboard_write_files(paths: Vec<String>) -> isize {
+    crate::macos::clipboard::write_files(&paths)
+}
+
+#[tauri::command]
+pub fn clipboard_read_files() -> ClipboardFiles {
+    let (paths, change_count) = crate::macos::clipboard::read_files();
+    ClipboardFiles { paths, change_count }
+}

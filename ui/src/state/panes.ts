@@ -82,6 +82,8 @@ interface AppState {
   missingFavorites: Set<string>;
   conflictPrompt: ConflictPrompt | null;
   notice: string | null;
+  /** What FindR last put on the system clipboard; `changeCount` tells whether it is still there. */
+  clipboard: { paths: string[]; cut: boolean; changeCount: number } | null;
   activity: string | null;
   progress: { done: number; total: number } | null;
 
@@ -163,6 +165,7 @@ export const useApp = create<AppState>((set, get) => ({
   missingFavorites: new Set(),
   conflictPrompt: null,
   notice: null,
+  clipboard: null,
   activity: null,
   progress: null,
 

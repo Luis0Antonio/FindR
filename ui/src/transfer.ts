@@ -20,7 +20,7 @@ function askConflict(name: string, remaining: number) {
 }
 
 /** Moves (or copies) `sources` into `target`, resolving name conflicts with the user. */
-export async function transfer(sources: string[], target: string, copy: boolean) {
+export async function transfer(sources: string[], target: string, copy: boolean, policy: ConflictPolicy | null = null) {
   const opId = `op-${++opCounter}`;
   const merge = (into: OpResult, r: OpResult) => {
     into.done.push(...r.done);
@@ -28,7 +28,7 @@ export async function transfer(sources: string[], target: string, copy: boolean)
   };
   const result: OpResult = { done: [], conflicts: [], errors: [] };
   try {
-    const first = await api.moveItems(sources, target, copy, null, opId);
+    const first = await api.moveItems(sources, target, copy, policy, opId);
     merge(result, first);
     const groups: Record<ConflictPolicy, string[]> = { replace: [], keepBoth: [], skip: [] };
     let applyAll: ConflictPolicy | null = null;
