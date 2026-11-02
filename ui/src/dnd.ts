@@ -163,14 +163,19 @@ export function beginDrag(ev: React.PointerEvent, makeSource: () => Source | nul
       if (Math.hypot(e.clientX - startX, e.clientY - startY) <= THRESHOLD) return;
       if (!start()) return cleanup();
     }
-    if (source?.kind === "items" && (e.clientX < 0 || e.clientY < 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight)) {
-      clearTarget();
-      cleanup();
-      api.dragOut(source.entries.map((x) => x.path));
-      return;
-    }
+    // ⌘ starts Cmd+Tab: hand the files to macOS while this window still has the mouse, so they can be dropped in another app.
+    const outside = e.clientX < 0 || e.clientY < 0 || e.clientX >= window.innerWidth || e.clientY >= window.innerHeight;
+    if ((outside || e.metaKey) && dragOut()) return;
     ghost!.style.transform = `translate(${e.clientX + 12}px, ${e.clientY + 10}px)`;
     refresh();
+  };
+
+  const dragOut = () => {
+    if (!ghost || source?.kind !== "items") return false;
+    clearTarget();
+    cleanup();
+    api.dragOut(source.entries.map((x) => x.path));
+    return true;
   };
 
   const onKey = (e: KeyboardEvent) => {
@@ -222,6 +227,7 @@ export function beginDrag(ev: React.PointerEvent, makeSource: () => Source | nul
     window.removeEventListener("pointerup", onUp);
     window.removeEventListener("keydown", onKey, true);
     window.removeEventListener("keyup", onKey, true);
+    window.removeEventListener("blur", dragOut);
     ghost?.remove();
     ghost = null;
     document.body.classList.remove("dragging", "dragging-folder", "drop-invalid");
@@ -231,6 +237,7 @@ export function beginDrag(ev: React.PointerEvent, makeSource: () => Source | nul
   window.addEventListener("pointerup", onUp);
   window.addEventListener("keydown", onKey, true);
   window.addEventListener("keyup", onKey, true);
+  window.addEventListener("blur", dragOut);
 }
 
 export function itemSource(paneId: PaneId): () => Source | null {
