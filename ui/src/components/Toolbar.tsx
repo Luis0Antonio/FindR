@@ -49,7 +49,7 @@ export function Toolbar({ id }: { id: PaneId }) {
   const split = useApp((s) => s.splitEnabled);
   const [focused, setFocused] = useState(false);
   const s = useApp.getState();
-  const searching = focused || pane.nameFilter !== "" || pane.kindFilter.size > 0;
+  const searching = focused || pane.nameFilter !== "";
   return (
     <div className="toolbar-wrap">
       <div className="toolbar" data-tauri-drag-region>
@@ -115,29 +115,31 @@ export function Toolbar({ id }: { id: PaneId }) {
           />
         </label>
       </div>
-      {searching && (
-        // Keeps focus in the search field, so clicking a filter doesn't hide the bar mid-click.
-        <div className="scope" onMouseDown={(e) => e.preventDefault()}>
-          <span className="scope-label">Search:</span>
-          <button className={`chip${pane.recursive ? "" : " on"}`} onClick={() => s.setRecursive(id, false)}>
-            This folder
-          </button>
-          <button className={`chip${pane.recursive ? " on" : ""}`} onClick={() => s.setRecursive(id, true)}>
-            Subfolders
-          </button>
-          <span className="chip-sep" />
-          {CHIPS.map((c) => (
-            <button key={c.kind} className={`chip${pane.kindFilter.has(c.kind) ? " on" : ""}`} onClick={() => s.toggleKind(id, c.kind)}>
-              {c.label}
+      {/* Keeps focus in the search field, so clicking a chip doesn't end the search mid-click. */}
+      <div className="chips" onMouseDown={(e) => e.preventDefault()}>
+        {searching && (
+          <>
+            <span className="scope-label">Search:</span>
+            <button className={`chip${pane.recursive ? "" : " on"}`} onClick={() => s.setRecursive(id, false)}>
+              This folder
             </button>
-          ))}
-          {pane.kindFilter.size > 0 && (
-            <button className="chip clear" onClick={() => s.clearKinds(id)}>
-              Clear
+            <button className={`chip${pane.recursive ? " on" : ""}`} onClick={() => s.setRecursive(id, true)}>
+              Subfolders
             </button>
-          )}
-        </div>
-      )}
+            <span className="chip-sep" />
+          </>
+        )}
+        {CHIPS.map((c) => (
+          <button key={c.kind} className={`chip${pane.kindFilter.has(c.kind) ? " on" : ""}`} onClick={() => s.toggleKind(id, c.kind)}>
+            {c.label}
+          </button>
+        ))}
+        {pane.kindFilter.size > 0 && (
+          <button className="chip clear" onClick={() => s.clearKinds(id)}>
+            Clear
+          </button>
+        )}
+      </div>
     </div>
   );
 }

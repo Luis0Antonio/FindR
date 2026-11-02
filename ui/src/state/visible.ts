@@ -5,7 +5,8 @@ import type { PaneState, SortDir, SortKey } from "./panes";
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
 
 export function compareEntries(a: FileEntry, b: FileEntry, key: SortKey, dir: SortDir, foldersFirst: boolean): number {
-  if (foldersFirst && a.isDir !== b.isDir) return a.isDir ? -1 : 1;
+  // Like Finder, folders stay on top only in name order; other orders mix them with files.
+  if (foldersFirst && key === "name" && a.isDir !== b.isDir) return a.isDir ? -1 : 1;
   let c = 0;
   switch (key) {
     case "name":

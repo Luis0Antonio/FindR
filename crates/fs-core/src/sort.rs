@@ -29,11 +29,11 @@ fn kind_key(e: &FileEntry) -> (String, String) {
     (format!("{:?}", e.kind), e.ext.clone().unwrap_or_default())
 }
 
-/// Folders first (optional), then the key in the chosen direction, then name ascending as the stable tie-breaker.
+/// Folders first (optional, name order only, like Finder), then the key in the chosen direction, then name ascending as the stable tie-breaker.
 /// Missing modification dates always sort last.
 pub fn sort_entries(entries: &mut [FileEntry], key: SortKey, dir: SortDir, folders_first: bool) {
     entries.sort_by(|a, b| {
-        if folders_first {
+        if folders_first && key == SortKey::Name {
             let group = b.is_dir.cmp(&a.is_dir);
             if group != Ordering::Equal {
                 return group;
@@ -99,8 +99,10 @@ mod tests {
             entry("a", false, Some(5), None),
             entry("c", false, Some(1), None),
         ];
+        sort_entries(&mut v, SortKey::Name, SortDir::Desc, true);
+        assert_eq!(names(&v), ["dir", "c", "b", "a"]);
         sort_entries(&mut v, SortKey::Size, SortDir::Desc, true);
-        assert_eq!(names(&v), ["dir", "a", "b", "c"]);
+        assert_eq!(names(&v), ["a", "b", "c", "dir"]);
         sort_entries(&mut v, SortKey::Size, SortDir::Asc, false);
         assert_eq!(names(&v), ["dir", "c", "a", "b"]);
     }
