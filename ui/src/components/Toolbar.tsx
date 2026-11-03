@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { FileKind } from "../api";
 import { useApp, type PaneId } from "../state/panes";
 import { baseName } from "../format";
@@ -47,9 +46,7 @@ export function focusSearch(id: PaneId) {
 export function Toolbar({ id }: { id: PaneId }) {
   const pane = useApp((s) => s.panes[id]);
   const split = useApp((s) => s.splitEnabled);
-  const [focused, setFocused] = useState(false);
   const s = useApp.getState();
-  const searching = focused || pane.nameFilter !== "";
   return (
     <div className="toolbar-wrap">
       <div className="toolbar" data-tauri-drag-region>
@@ -97,8 +94,6 @@ export function Toolbar({ id }: { id: PaneId }) {
             value={pane.nameFilter}
             spellCheck={false}
             autoCorrect="off"
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
             onChange={(e) => s.setNameFilter(id, e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Escape") {
@@ -114,21 +109,24 @@ export function Toolbar({ id }: { id: PaneId }) {
             }}
           />
         </label>
+        <div className="capsule">
+          <button
+            className={`tb${pane.recursive ? " on" : ""}`}
+            title={pane.recursive ? "Searching this folder and all its subfolders" : "Searching this folder only. Click to include subfolders"}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => s.setRecursive(id, !pane.recursive)}
+          >
+            <svg width="16" height="14" viewBox="0 0 16 14" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+              <rect x="1.5" y="0.75" width="5" height="3.5" rx="0.8" />
+              <path d="M4 4.25v7.25h4.5M4 7.5h4.5" />
+              <rect x="8.5" y="5.75" width="6" height="3.5" rx="0.8" />
+              <rect x="8.5" y="9.75" width="6" height="3.5" rx="0.8" />
+            </svg>
+          </button>
+        </div>
       </div>
       {/* Keeps focus in the search field, so clicking a chip doesn't end the search mid-click. */}
       <div className="chips" onMouseDown={(e) => e.preventDefault()}>
-        {searching && (
-          <>
-            <span className="scope-label">Search:</span>
-            <button className={`chip${pane.recursive ? "" : " on"}`} onClick={() => s.setRecursive(id, false)}>
-              This folder
-            </button>
-            <button className={`chip${pane.recursive ? " on" : ""}`} onClick={() => s.setRecursive(id, true)}>
-              Subfolders
-            </button>
-            <span className="chip-sep" />
-          </>
-        )}
         {CHIPS.map((c) => (
           <button key={c.kind} className={`chip${pane.kindFilter.has(c.kind) ? " on" : ""}`} onClick={() => s.toggleKind(id, c.kind)}>
             {c.label}

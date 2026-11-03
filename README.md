@@ -21,7 +21,7 @@ FindR is a file manager for people who live on the keyboard but still want Finde
 
 **Browsing**
 - **Split view.** Two folders side by side (⌘\\), with drag and drop between them. Tab switches panes.
-- **Type to search.** Start typing anywhere and the list filters by name. Turn on *Subfolders* to search everything below the current folder. Documents, Desktop and Downloads are indexed and kept up to date as files change, so searching them is instant, and folders like `node_modules`, `.git` and `build` are skipped. Both lists can be changed in Settings.
+- **Type to search.** Start typing anywhere and the list filters by name. It searches the current folder; the button next to the search field extends it to everything below. Documents, Desktop and Downloads are indexed and kept up to date as files change, so searching them is instant, and folders like `node_modules`, `.git` and `build` are skipped. Both lists can be changed in Settings.
 - **Filter by kind.** One-click chips for folders, images, documents, video, audio, archives and code.
 - **Real previews.** Thumbnails for photos, videos and PDFs, Quick Look on Space, and live updates when files change on disk.
 - **Sorting like Finder.** Sort by name, date modified, date created, kind or size. Folders stay on top only in name order.
