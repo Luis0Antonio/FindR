@@ -119,8 +119,11 @@ pub fn volume_of(path: String) -> FsResult<u64> {
 }
 
 #[tauri::command]
-pub async fn convert_file(path: String, target: String) -> FsResult<String> {
-    blocking(move || crate::convert::convert_file(Path::new(&path), &target).map(|p| p.to_string_lossy().into_owned())).await
+pub async fn convert_file(path: String, target: String, keep_original: bool) -> FsResult<String> {
+    blocking(move || {
+        crate::convert::convert_file(Path::new(&path), &target, keep_original).map(|p| p.to_string_lossy().into_owned())
+    })
+    .await
 }
 
 #[tauri::command]

@@ -4,8 +4,8 @@ use std::process::Command;
 use fs_core::{FsError, FsResult};
 
 /// Converts `path` into `target` (an extension such as "png" or "mp3") next to the original, then moves
-/// the original to the Trash. Returns the new file's path.
-pub fn convert_file(path: &Path, target: &str) -> FsResult<PathBuf> {
+/// the original to the Trash unless `keep_original` is set. Returns the new file's path.
+pub fn convert_file(path: &Path, target: &str, keep_original: bool) -> FsResult<PathBuf> {
     let dir = path.parent().ok_or_else(|| FsError::InvalidTarget("No parent folder".into()))?;
     let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     let (stem, _) = fs_core::names::split_ext(&name);
@@ -29,8 +29,10 @@ pub fn convert_file(path: &Path, target: &str) -> FsResult<PathBuf> {
 
     let dest = fs_core::names::unique_name(dir, &format!("{stem}.{target}"), |p| p.exists());
     std::fs::rename(&tmp, &dest).map_err(|e| FsError::from_io(e, "Couldn't save the converted file"))?;
-    fs_core::ops::move_to_trash(path)
-        .map_err(|e| FsError::Io(format!("Converted, but couldn't move “{name}” to the Trash: {e}")))?;
+    if !keep_original {
+        fs_core::ops::move_to_trash(path)
+            .map_err(|e| FsError::Io(format!("Converted, but couldn't move “{name}” to the Trash: {e}")))?;
+    }
     Ok(dest)
 }
 

@@ -31,7 +31,7 @@ FindR is a file manager for people who live on the keyboard but still want Finde
 - **Copy, cut and paste** with ⌘C, ⌘X and ⌘V. FindR uses the system clipboard, so you can copy in Finder and paste in FindR, or the other way round.
 - **Drag and drop** within FindR, onto sidebar folders, or out to any other app. Folders spring open when you hover over them, ⌥ copies instead of moving, and the drag shows tilted previews of the files.
 - **Name clashes** prompt you to Replace, Keep Both or Skip, with an option to apply the choice to every clash.
-- **Convert files** from the right-click menu: images to PNG, JPEG, HEIC, WebP or TIFF; video to MP4 or MOV; audio to MP3, M4A or WAV. The conversion runs locally with macOS's own tools.
+- **Convert files** from the right-click menu, one at a time or a whole selection at once (even of mixed types): images to PNG, JPEG, HEIC, WebP or TIFF; video to MP4 or MOV; audio to MP3, M4A or WAV. Settings choose whether the converted file replaces the original or sits next to it. The conversion runs locally with macOS’s own tools.
 - **Rename, new folder, Move to Trash** and *Show in Finder* are all one keystroke or click away.
 
 **Fits into macOS**

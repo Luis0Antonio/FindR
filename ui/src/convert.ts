@@ -22,19 +22,20 @@ function format(entry: FileEntry): string | null {
 export function convertTargets(entries: FileEntry[]): string[] {
   const formats = entries.map(format);
   const groups = formats.map((f) => (f ? GROUPS[f] : undefined));
-  if (!groups.length || groups.some((g) => g !== groups[0]) || !groups[0]) return [];
-  return groups[0].filter((t) => !formats.every((f) => f === t));
+  if (!groups.length || groups.some((g) => !g)) return [];
+  return groups[0]!.filter((t) => groups.every((g) => g!.includes(t)) && !formats.every((f) => f === t));
 }
 
 export async function convertEntries(id: PaneId, entries: FileEntry[], target: string) {
   const todo = entries.filter((e) => format(e) !== target);
+  const keep = useApp.getState().keepConvertedOriginals;
   const created: string[] = [];
   const errors: string[] = [];
   for (const [i, entry] of todo.entries()) {
     const counter = todo.length > 1 ? ` (${i + 1} of ${todo.length})` : "";
     useApp.setState({ activity: `Converting “${entry.name}” to .${target}${counter}…` });
     try {
-      created.push(await api.convertFile(entry.path, target));
+      created.push(await api.convertFile(entry.path, target, keep));
     } catch (e) {
       errors.push(String((e as { message?: string }).message ?? e));
     }

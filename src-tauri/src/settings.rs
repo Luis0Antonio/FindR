@@ -29,6 +29,8 @@ pub struct Settings {
     pub sidebar_width: Option<f64>,
     #[serde(default)]
     pub columns: Option<Vec<String>>,
+    #[serde(default)]
+    pub keep_converted_originals: bool,
     pub panes: HashMap<String, PaneSettings>,
 }
 

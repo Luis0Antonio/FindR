@@ -73,6 +73,7 @@ interface AppState {
   sidebarHidden: boolean;
   sidebarWidth: number;
   columns: Column[];
+  keepConvertedOriginals: boolean;
   settingsOpen: boolean;
   favorites: string[];
   home: string;
@@ -118,6 +119,7 @@ interface AppState {
   toggleSidebar: () => void;
   setSidebarWidth: (width: number) => void;
   toggleColumn: (column: Column) => void;
+  setKeepConvertedOriginals: (keep: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
   runSearch: (id: PaneId) => Promise<void>;
   stopSearch: (id: PaneId) => void;
@@ -156,6 +158,7 @@ export const useApp = create<AppState>((set, get) => ({
   sidebarHidden: false,
   sidebarWidth: 200,
   columns: DEFAULT_COLUMNS,
+  keepConvertedOriginals: false,
   settingsOpen: false,
   favorites: [],
   home: "/",
@@ -187,6 +190,7 @@ export const useApp = create<AppState>((set, get) => ({
       sidebarHidden: saved?.sidebarHidden ?? false,
       sidebarWidth: saved?.sidebarWidth ?? 200,
       columns: saved?.columns ?? DEFAULT_COLUMNS,
+      keepConvertedOriginals: saved?.keepConvertedOriginals ?? false,
       favorites: saved?.favorites ?? [home, `${home}/Desktop`, `${home}/Documents`, `${home}/Downloads`],
       ready: true,
     });
@@ -412,6 +416,7 @@ export const useApp = create<AppState>((set, get) => ({
     const columns = get().columns;
     set({ columns: columns.includes(column) ? columns.filter((c) => c !== column) : ALL_COLUMNS.filter((c) => c === column || columns.includes(c)) });
   },
+  setKeepConvertedOriginals: (keep) => set({ keepConvertedOriginals: keep }),
   setSettingsOpen: (open) => set({ settingsOpen: open }),
   setSidebarWidth: (width) => set({ sidebarWidth: Math.round(Math.min(MAX_SIDEBAR, Math.max(MIN_SIDEBAR, width))) }),
 
@@ -599,6 +604,7 @@ export function startSettingsPersistence() {
       sidebarHidden: s.sidebarHidden,
       sidebarWidth: s.sidebarWidth,
       columns: s.columns,
+      keepConvertedOriginals: s.keepConvertedOriginals,
       panes: { left: pane(s.panes.left), right: pane(s.panes.right) },
     };
     const text = JSON.stringify(settings);

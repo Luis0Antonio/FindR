@@ -48,6 +48,7 @@ export interface Settings {
   sidebarHidden: boolean;
   sidebarWidth: number;
   columns: Column[];
+  keepConvertedOriginals: boolean;
   panes: Record<"left" | "right", PaneSettings>;
 }
 
@@ -74,7 +75,7 @@ export const api = {
   moveToTrash: (paths: string[]) => invoke<void>("move_to_trash", { paths }),
   clipboardWriteFiles: (paths: string[]) => invoke<number>("clipboard_write_files", { paths }),
   clipboardReadFiles: () => invoke<{ paths: string[]; changeCount: number }>("clipboard_read_files"),
-  convertFile: (path: string, target: string) => invoke<string>("convert_file", { path, target }),
+  convertFile: (path: string, target: string, keepOriginal: boolean) => invoke<string>("convert_file", { path, target, keepOriginal }),
   dragOut: (paths: string[]) => invoke<void>("drag_out", { paths }),
   revealInFinder: (paths: string[]) => invoke<void>("reveal_in_finder", { paths }),
 };
