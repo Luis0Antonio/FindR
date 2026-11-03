@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 
-use fs_core::search::{search, SearchOptions};
+use fs_core::search::{search, stream, SearchOptions};
 use fs_core::FileKind;
 use serde_json::json;
 use tauri::{AppHandle, Emitter};
@@ -29,10 +29,16 @@ pub fn start_search(
     running().lock().unwrap().insert(id.clone(), cancel.clone());
     let search_id = id.clone();
     std::thread::spawn(move || {
-        let opts = SearchOptions { query, kinds, show_hidden, limit: LIMIT };
-        let outcome = search(&PathBuf::from(root), &opts, Arc::new(crate::commands::is_package), &cancel, |entries| {
+        let root = PathBuf::from(root);
+        let indexed = if show_hidden { None } else { crate::index::find(&root, &query) };
+        let opts = SearchOptions { query, kinds, show_hidden, excluded: crate::index::excluded(), limit: LIMIT };
+        let emit = |entries| {
             let _ = app.emit("search://results", json!({ "searchId": search_id, "entries": entries, "done": false }));
-        });
+        };
+        let outcome = match indexed {
+            Some(paths) => stream(paths.into_iter(), &opts, &crate::commands::is_package, &cancel, emit),
+            None => search(&root, &opts, Arc::new(crate::commands::is_package), &cancel, emit),
+        };
         running().lock().unwrap().remove(&search_id);
         if !outcome.cancelled {
             let _ = app.emit(

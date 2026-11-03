@@ -1,4 +1,5 @@
-use std::path::Path;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -13,6 +14,8 @@ pub struct SearchOptions {
     pub query: String,
     pub kinds: Vec<FileKind>,
     pub show_hidden: bool,
+    /// Folder names never descended into or listed, such as `node_modules`.
+    pub excluded: HashSet<String>,
     pub limit: usize,
 }
 
@@ -36,15 +39,17 @@ pub fn search(
     opts: &SearchOptions,
     is_package: PackageFn,
     cancel: &AtomicBool,
-    mut on_batch: impl FnMut(Vec<FileEntry>),
+    on_batch: impl FnMut(Vec<FileEntry>),
 ) -> SearchOutcome {
     let query = opts.query.to_lowercase();
     let pkg = is_package.clone();
+    let excluded = opts.excluded.clone();
     let walker = WalkDir::new(root)
         .skip_hidden(!opts.show_hidden)
         .follow_links(false)
         .parallelism(Parallelism::RayonNewPool(0))
         .process_read_dir(move |_, _, _, children| {
+            children.retain(|c| c.as_ref().map_or(true, |c| !(c.file_type.is_dir() && excluded.contains(&*c.file_name.to_string_lossy()))));
             for child in children.iter_mut().flatten() {
                 if child.file_type.is_dir() {
                     let name = child.file_name.to_string_lossy();
@@ -57,20 +62,33 @@ pub fn search(
             }
         });
 
+    let candidates = walker
+        .into_iter()
+        .take_while(|_| !cancel.load(Ordering::Relaxed))
+        .flatten()
+        .filter(|dent| dent.depth > 0 && dent.file_name.to_string_lossy().to_lowercase().contains(&query))
+        .map(|dent| dent.path());
+    stream(candidates, opts, &*is_package, cancel, on_batch)
+}
+
+/// Streams the candidates that pass the hidden and kind filters, in batches, up to the limit.
+pub fn stream(
+    candidates: impl Iterator<Item = PathBuf>,
+    opts: &SearchOptions,
+    is_package: &dyn Fn(&Path, &str) -> bool,
+    cancel: &AtomicBool,
+    mut on_batch: impl FnMut(Vec<FileEntry>),
+) -> SearchOutcome {
     let mut batch = Vec::new();
     let mut last_flush = Instant::now();
     let mut found = 0usize;
     let mut outcome = SearchOutcome { truncated: false, cancelled: false };
 
-    for dent in walker.into_iter().flatten() {
+    for path in candidates {
         if cancel.load(Ordering::Relaxed) {
-            outcome.cancelled = true;
             break;
         }
-        if dent.depth == 0 || !dent.file_name.to_string_lossy().to_lowercase().contains(&query) {
-            continue;
-        }
-        let Ok(entry) = FileEntry::from_path(&dent.path(), &*is_package) else { continue };
+        let Ok(entry) = FileEntry::from_path(&path, is_package) else { continue };
         if (entry.is_hidden && !opts.show_hidden) || !kind_matches(&opts.kinds, entry.kind) {
             continue;
         }
@@ -85,6 +103,7 @@ pub fn search(
             last_flush = Instant::now();
         }
     }
+    outcome.cancelled = cancel.load(Ordering::Relaxed);
     if !batch.is_empty() && !outcome.cancelled {
         on_batch(batch);
     }
@@ -98,7 +117,7 @@ mod tests {
     use std::fs;
 
     fn opts(query: &str) -> SearchOptions {
-        SearchOptions { query: query.into(), kinds: vec![], show_hidden: false, limit: 10_000 }
+        SearchOptions { query: query.into(), kinds: vec![], show_hidden: false, excluded: HashSet::new(), limit: 10_000 }
     }
 
     fn run(root: &Path, o: &SearchOptions) -> (Vec<String>, SearchOutcome) {
@@ -138,6 +157,17 @@ mod tests {
         o.show_hidden = true;
         let (names, _) = run(tmp.path(), &o);
         assert_eq!(names, ["Report.txt", "report-final.pdf", "report.txt"]);
+    }
+
+    #[test]
+    fn excluded_folders_are_skipped() {
+        let tmp = fixture();
+        fs::create_dir_all(tmp.path().join("node_modules/report")).unwrap();
+        fs::write(tmp.path().join("node_modules/report/report.js"), "").unwrap();
+        let mut o = opts("report");
+        o.excluded = HashSet::from(["node_modules".to_string()]);
+        let (names, _) = run(tmp.path(), &o);
+        assert_eq!(names, ["Report.txt", "report-final.pdf"]);
     }
 
     #[test]

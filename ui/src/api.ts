@@ -49,6 +49,8 @@ export interface Settings {
   sidebarWidth: number;
   columns: Column[];
   keepConvertedOriginals: boolean;
+  indexRoots?: string[];
+  excludedFolders?: string[];
   panes: Record<"left" | "right", PaneSettings>;
 }
 
@@ -63,6 +65,8 @@ export const api = {
   startSearch: (searchId: string, root: string, query: string, kinds: FileKind[], showHidden: boolean) =>
     invoke<string>("start_search", { searchId, root, query, kinds, showHidden }),
   cancelSearch: (searchId: string) => invoke<void>("cancel_search", { searchId }),
+  configureIndex: (roots: string[], excluded: string[]) => invoke<void>("configure_index", { roots, excluded }),
+  indexStatus: () => invoke<{ building: boolean; items: number }>("index_status"),
   watchDir: (paneId: string, path: string) => invoke<void>("watch_dir", { paneId, path }),
   unwatchDir: (paneId: string) => invoke<void>("unwatch_dir", { paneId }),
   createFolder: (parent: string) => invoke<FileEntry>("create_folder", { parent }),

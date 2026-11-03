@@ -1,6 +1,7 @@
 mod commands;
 mod convert;
 mod icon_protocol;
+mod index;
 mod links;
 mod macos;
 mod search;
@@ -51,6 +52,8 @@ pub fn run() {
             commands::quicklook_close,
             search::start_search,
             search::cancel_search,
+            index::configure_index,
+            index::index_status,
             watcher::watch_dir,
             watcher::unwatch_dir,
             settings::load_settings,

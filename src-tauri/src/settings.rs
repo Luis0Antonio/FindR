@@ -31,6 +31,10 @@ pub struct Settings {
     pub columns: Option<Vec<String>>,
     #[serde(default)]
     pub keep_converted_originals: bool,
+    #[serde(default)]
+    pub index_roots: Option<Vec<String>>,
+    #[serde(default)]
+    pub excluded_folders: Option<Vec<String>>,
     pub panes: HashMap<String, PaneSettings>,
 }
 

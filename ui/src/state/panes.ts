@@ -13,6 +13,27 @@ export const ALL_COLUMNS: Column[] = ["modified", "created", "kind", "size"];
 const DEFAULT_COLUMNS: Column[] = ["modified", "kind", "size"];
 const MIN_SIDEBAR = 150;
 const MAX_SIDEBAR = 320;
+export const DEFAULT_EXCLUDED = [
+  "node_modules",
+  "bower_components",
+  ".git",
+  "target",
+  "build",
+  "dist",
+  ".next",
+  ".nuxt",
+  ".svelte-kit",
+  ".turbo",
+  ".cache",
+  "coverage",
+  "venv",
+  ".venv",
+  "__pycache__",
+  "Pods",
+  "DerivedData",
+  ".gradle",
+  ".dart_tool",
+];
 
 export interface PaneState {
   path: string;
@@ -74,6 +95,9 @@ interface AppState {
   sidebarWidth: number;
   columns: Column[];
   keepConvertedOriginals: boolean;
+  /** Folders whose names are indexed so searching below them is instant. */
+  indexRoots: string[];
+  excludedFolders: string[];
   settingsOpen: boolean;
   favorites: string[];
   home: string;
@@ -121,6 +145,8 @@ interface AppState {
   toggleColumn: (column: Column) => void;
   setKeepConvertedOriginals: (keep: boolean) => void;
   setSettingsOpen: (open: boolean) => void;
+  setIndexRoots: (roots: string[]) => void;
+  setExcludedFolders: (names: string[]) => void;
   runSearch: (id: PaneId) => Promise<void>;
   stopSearch: (id: PaneId) => void;
   onSearchBatch: (batch: SearchBatch) => void;
@@ -159,6 +185,8 @@ export const useApp = create<AppState>((set, get) => ({
   sidebarWidth: 200,
   columns: DEFAULT_COLUMNS,
   keepConvertedOriginals: false,
+  indexRoots: [],
+  excludedFolders: DEFAULT_EXCLUDED,
   settingsOpen: false,
   favorites: [],
   home: "/",
@@ -191,6 +219,8 @@ export const useApp = create<AppState>((set, get) => ({
       sidebarWidth: saved?.sidebarWidth ?? 200,
       columns: saved?.columns ?? DEFAULT_COLUMNS,
       keepConvertedOriginals: saved?.keepConvertedOriginals ?? false,
+      indexRoots: saved?.indexRoots ?? [`${home}/Documents`, `${home}/Desktop`, `${home}/Downloads`],
+      excludedFolders: saved?.excludedFolders ?? DEFAULT_EXCLUDED,
       favorites: saved?.favorites ?? [home, `${home}/Desktop`, `${home}/Documents`, `${home}/Downloads`],
       ready: true,
     });
@@ -201,6 +231,7 @@ export const useApp = create<AppState>((set, get) => ({
     get().refreshFavorites();
     get().loadVolumes();
     api.watchDir("volumes", "/Volumes");
+    api.configureIndex(get().indexRoots, get().excludedFolders);
   },
 
   patchPane: (id, patch) => set((s) => ({ panes: { ...s.panes, [id]: { ...s.panes[id], ...patch } } })),
@@ -418,6 +449,14 @@ export const useApp = create<AppState>((set, get) => ({
   },
   setKeepConvertedOriginals: (keep) => set({ keepConvertedOriginals: keep }),
   setSettingsOpen: (open) => set({ settingsOpen: open }),
+  setIndexRoots: (roots) => {
+    set({ indexRoots: roots });
+    api.configureIndex(roots, get().excludedFolders);
+  },
+  setExcludedFolders: (names) => {
+    set({ excludedFolders: names });
+    api.configureIndex(get().indexRoots, names);
+  },
   setSidebarWidth: (width) => set({ sidebarWidth: Math.round(Math.min(MAX_SIDEBAR, Math.max(MIN_SIDEBAR, width))) }),
 
   toggleHidden: () => {
@@ -605,6 +644,8 @@ export function startSettingsPersistence() {
       sidebarWidth: s.sidebarWidth,
       columns: s.columns,
       keepConvertedOriginals: s.keepConvertedOriginals,
+      indexRoots: s.indexRoots,
+      excludedFolders: s.excludedFolders,
       panes: { left: pane(s.panes.left), right: pane(s.panes.right) },
     };
     const text = JSON.stringify(settings);
