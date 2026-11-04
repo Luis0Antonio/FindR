@@ -33,19 +33,36 @@ export function compareEntries(a: FileEntry, b: FileEntry, key: SortKey, dir: So
   return c || collator.compare(a.name, b.name);
 }
 
-const cache = new WeakMap<FileEntry[], { sig: string; kinds: unknown; result: FileEntry[] }>();
+const cache = new WeakMap<FileEntry[], { sig: string; kinds: unknown; expanded: unknown; children: unknown; result: FileEntry[] }>();
 
-/** (searchResults ?? entries) -> kindFilter -> nameFilter (when not recursive) -> sort. */
+/** (searchResults ?? entries) -> kindFilter -> nameFilter (when not recursive) -> sort, with expanded folders' children under them. */
 export function visibleEntries(p: PaneState): FileEntry[] {
   const source = p.searchResults ?? p.entries;
   const sig = `${p.sortKey}|${p.sortDir}|${p.foldersFirst}|${p.recursive}|${p.nameFilter}`;
   const hit = cache.get(source);
-  if (hit && hit.sig === sig && hit.kinds === p.kindFilter) return hit.result;
-  let list = source;
-  if (p.kindFilter.size > 0) list = list.filter((e) => p.kindFilter.has(e.kind === "package" ? "other" : e.kind));
+  if (hit && hit.sig === sig && hit.kinds === p.kindFilter && hit.expanded === p.expanded && hit.children === p.children) return hit.result;
   const q = p.nameFilter.trim().toLowerCase();
-  if (q && !p.recursive) list = list.filter((e) => e.name.toLowerCase().includes(q));
-  const result = [...list].sort((a, b) => compareEntries(a, b, p.sortKey, p.sortDir, p.foldersFirst));
-  cache.set(source, { sig, kinds: p.kindFilter, result });
+  const level = (list: FileEntry[]) => {
+    if (p.kindFilter.size > 0) list = list.filter((e) => p.kindFilter.has(e.kind === "package" ? "other" : e.kind));
+    if (q && !p.recursive) list = list.filter((e) => e.name.toLowerCase().includes(q));
+    return [...list].sort((a, b) => compareEntries(a, b, p.sortKey, p.sortDir, p.foldersFirst));
+  };
+  const result: FileEntry[] = [];
+  const walk = (list: FileEntry[]) => {
+    for (const e of level(list)) {
+      result.push(e);
+      const kids = p.expanded.has(e.path) ? p.children[e.path] : undefined;
+      if (kids) walk(kids);
+    }
+  };
+  if (p.searchResults) result.push(...level(source));
+  else walk(source);
+  cache.set(source, { sig, kinds: p.kindFilter, expanded: p.expanded, children: p.children, result });
   return result;
+}
+
+export function depthOf(root: string, path: string): number {
+  const prefix = root === "/" ? "/" : root + "/";
+  if (!path.startsWith(prefix)) return 0;
+  return path.slice(prefix.length).split("/").length - 1;
 }

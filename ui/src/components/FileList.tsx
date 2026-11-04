@@ -5,6 +5,7 @@ import { useApp, type PaneId, type PaneState, type SortKey } from "../state/pane
 import { FileRow } from "./FileRow";
 import { showBackgroundMenu, showRowMenu } from "../contextmenu";
 import { beginDrag, itemSource } from "../dnd";
+import { depthOf } from "../state/visible";
 
 export function rowHeight(itemSize: number) {
   return Math.max(22, itemSize + 6);
@@ -56,6 +57,10 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
     if (ev.button !== 0) return;
     const s = useApp.getState();
     const entry = entryAt(ev.target);
+    if (entry && (ev.target as HTMLElement).closest(".disclosure")) {
+      s.toggleExpand(id, entry.path, ev.altKey);
+      return;
+    }
     if (!entry) {
       if (!ev.metaKey && !ev.shiftKey) s.clearSelection(id);
       return;
@@ -68,13 +73,13 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
 
   const onClick = (ev: React.MouseEvent) => {
     const entry = entryAt(ev.target);
-    if (!entry || ev.metaKey || ev.shiftKey || ev.detail > 1) return;
+    if (!entry || (ev.target as HTMLElement).closest(".disclosure") || ev.metaKey || ev.shiftKey || ev.detail > 1) return;
     if (pane.selection.size > 1 && pane.selection.has(entry.path)) useApp.getState().selectOnly(id, entry.path);
   };
 
   const onDoubleClick = (ev: React.MouseEvent) => {
     const entry = entryAt(ev.target);
-    if (entry && pane.renaming !== entry.path) useApp.getState().openEntries(id, [entry]);
+    if (entry && pane.renaming !== entry.path && !(ev.target as HTMLElement).closest(".disclosure")) useApp.getState().openEntries(id, [entry]);
   };
 
   const onContextMenu = (ev: React.MouseEvent) => {
@@ -112,6 +117,8 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
                 selected={pane.selection.has(e.path)}
                 cursor={pane.cursor === e.path}
                 folderColumn={showFolder ? relativeFolder(pane.path, e.path) : null}
+                depth={showFolder ? null : depthOf(pane.path, e.path)}
+                expanded={pane.expanded.has(e.path)}
                 columns={columns}
                 paneId={id}
                 renaming={pane.renaming === e.path}

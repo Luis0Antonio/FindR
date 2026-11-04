@@ -50,6 +50,8 @@ export interface PaneState {
   searchId: string | null;
   searchDone: boolean;
   searchTruncated: boolean;
+  expanded: Set<string>;
+  children: Record<string, FileEntry[]>;
   selection: Set<string>;
   anchor: string | null;
   cursor: string | null;
@@ -75,6 +77,8 @@ export function newPane(path: string): PaneState {
     searchId: null,
     searchDone: true,
     searchTruncated: false,
+    expanded: new Set(),
+    children: {},
     selection: new Set(),
     anchor: null,
     cursor: null,
@@ -125,6 +129,10 @@ interface AppState {
   forward: (id: PaneId) => void;
   up: (id: PaneId) => void;
   openEntries: (id: PaneId, entries: FileEntry[]) => void;
+  toggleExpand: (id: PaneId, path: string, recursive: boolean) => void;
+  expand: (id: PaneId, path: string, recursive: boolean) => Promise<void>;
+  collapse: (id: PaneId, path: string, recursive: boolean) => void;
+  disclose: (id: PaneId, open: boolean, recursive: boolean) => void;
   openSelection: (id: PaneId) => void;
   setSort: (id: PaneId, key: SortKey) => void;
   setItemSize: (id: PaneId, size: number) => void;
@@ -174,6 +182,37 @@ const refreshAfterRename: Partial<Record<PaneId, boolean>> = {};
 const searchTimers: Partial<Record<PaneId, number>> = {};
 const SEARCH_DEBOUNCE_MS = 200;
 let searchCounter = 0;
+
+const MAX_EXPANDED = 200;
+
+const watchKey = (id: PaneId, path: string) => `${id}|${path}`;
+
+function syncWatches(id: PaneId, before: Record<string, FileEntry[]>, after: Record<string, FileEntry[]>) {
+  for (const dir in before) if (!(dir in after)) api.unwatchDir(watchKey(id, dir));
+  for (const dir in after) if (!(dir in before)) api.watchDir(watchKey(id, dir), dir);
+}
+
+async function fetchTree(start: string[], expanded: Set<string>, showHidden: boolean, all: boolean) {
+  const loaded: Record<string, FileEntry[]> = {};
+  let level = start;
+  let budget = MAX_EXPANDED;
+  while (level.length && budget > 0) {
+    level = level.slice(0, budget);
+    budget -= level.length;
+    const lists = await Promise.all(level.map((dir) => api.listDir(dir, showHidden).catch(() => null)));
+    const next: string[] = [];
+    level.forEach((dir, i) => {
+      const kids = lists[i];
+      if (!kids) return;
+      loaded[dir] = kids;
+      for (const k of kids) if (k.isDir && (all || expanded.has(k.path))) next.push(k.path);
+    });
+    level = next;
+  }
+  return loaded;
+}
+
+const isInside = (dir: string, path: string) => path.startsWith(dir === "/" ? "/" : dir + "/");
 
 export const useApp = create<AppState>((set, get) => ({
   panes: { left: newPane("/"), right: newPane("/") },
@@ -245,7 +284,8 @@ export const useApp = create<AppState>((set, get) => ({
     if (s.splitEnabled) {
       s.stopSearch("right");
       api.unwatchDir("right");
-      set({ splitEnabled: false, activePane: "left" });
+      syncWatches("right", s.panes.right.children, {});
+      set({ splitEnabled: false, activePane: "left", panes: { ...s.panes, right: { ...s.panes.right, children: {} } } });
       return;
     }
     const { path } = s.panes.left;
@@ -272,7 +312,9 @@ export const useApp = create<AppState>((set, get) => ({
     s.stopSearch("left");
     s.stopSearch("right");
     api.unwatchDir("right");
-    set({ splitEnabled: false, activePane: "left", panes: { ...s.panes, left: get().panes.right } });
+    syncWatches("left", s.panes.left.children, {});
+    syncWatches("right", s.panes.right.children, {});
+    set({ splitEnabled: false, activePane: "left", panes: { ...s.panes, left: { ...get().panes.right, children: {} } } });
     get().reload("left");
     get().runSearch("left");
   },
@@ -293,9 +335,12 @@ export const useApp = create<AppState>((set, get) => ({
         history,
         historyIndex,
         entries: [],
+        expanded: new Set(),
+        children: {},
         nameFilter: "",
         renaming: null,
       });
+      syncWatches(id, pane.children, {});
       get().stopSearch(id);
     }
     get().patchPane(id, { selection: new Set(select ? [select] : []), anchor: select, cursor: select });
@@ -307,13 +352,19 @@ export const useApp = create<AppState>((set, get) => ({
     get().patchPane(id, { loading: true });
     api.watchDir(id, path);
     try {
-      const entries = await api.listDir(path, get().showHidden);
+      const showHidden = get().showHidden;
+      const entries = await api.listDir(path, showHidden);
+      const { expanded } = get().panes[id];
+      const children = await fetchTree(entries.filter((e) => e.isDir && expanded.has(e.path)).map((e) => e.path), expanded, showHidden, false);
       const pane = get().panes[id];
       if (pane.path !== path) return;
-      const present = new Set(entries.map((e) => e.path));
+      if (pane.expanded !== expanded) return get().reload(id, opts);
+      syncWatches(id, pane.children, children);
+      const present = new Set([...entries, ...Object.values(children).flat()].map((e) => e.path));
       const selection = new Set([...pane.selection].filter((p) => present.has(p)));
       get().patchPane(id, {
         entries,
+        children,
         error: null,
         loading: false,
         selection,
@@ -361,6 +412,50 @@ export const useApp = create<AppState>((set, get) => ({
       return;
     }
     for (const e of entries) if (!e.isDir) api.openPath(e.path);
+  },
+
+  toggleExpand: (id, path, recursive) => {
+    if (get().panes[id].expanded.has(path)) get().collapse(id, path, recursive);
+    else get().expand(id, path, recursive);
+  },
+
+  expand: async (id, path, recursive) => {
+    const root = get().panes[id].path;
+    const loaded = await fetchTree([path], get().panes[id].expanded, get().showHidden, recursive);
+    const p = get().panes[id];
+    if (p.path !== root || !loaded[path]) return;
+    const expanded = new Set(p.expanded);
+    for (const dir of recursive ? Object.keys(loaded) : [path]) expanded.add(dir);
+    const children = { ...p.children, ...loaded };
+    syncWatches(id, p.children, children);
+    get().patchPane(id, { expanded, children });
+  },
+
+  collapse: (id, path, recursive) => {
+    const p = get().panes[id];
+    const inside = (x: string) => isInside(path, x);
+    const expanded = new Set([...p.expanded].filter((x) => x !== path && !(recursive && inside(x))));
+    const children = Object.fromEntries(Object.entries(p.children).filter(([dir]) => dir !== path && !inside(dir)));
+    syncWatches(id, p.children, children);
+    const selection = new Set([...p.selection].filter((x) => !inside(x)));
+    if (selection.size < p.selection.size) selection.add(path);
+    const moved = (x: string | null) => (x && inside(x) ? path : x);
+    get().patchPane(id, { expanded, children, selection, cursor: moved(p.cursor), anchor: moved(p.anchor) });
+  },
+
+  disclose: (id, open, recursive) => {
+    const p = get().panes[id];
+    if (p.searchResults) return;
+    const folders = visibleEntries(p).filter((e) => p.selection.has(e.path) && e.isDir && (open ? recursive || !p.expanded.has(e.path) : p.expanded.has(e.path)));
+    if (folders.length) {
+      for (const f of folders) {
+        if (open) get().expand(id, f.path, recursive);
+        else get().collapse(id, f.path, recursive);
+      }
+      return;
+    }
+    const parent = !open && p.cursor ? parentOf(p.cursor) : null;
+    if (parent && parent !== p.path && p.expanded.has(parent)) get().selectOnly(id, parent);
   },
 
   openSelection: (id) => {
@@ -507,8 +602,9 @@ export const useApp = create<AppState>((set, get) => ({
     }
     for (const id of ["left", "right"] as PaneId[]) {
       if (id === "right" && !get().splitEnabled) continue;
-      if (get().panes[id].path !== path) continue;
-      if (get().panes[id].renaming) refreshAfterRename[id] = true;
+      const p = get().panes[id];
+      if (p.path !== path && !(path in p.children)) continue;
+      if (p.renaming) refreshAfterRename[id] = true;
       else get().reload(id, { fromWatcher: true });
     }
   },
@@ -532,7 +628,7 @@ export const useApp = create<AppState>((set, get) => ({
     const p = get().panes[id];
     const path = p.renaming;
     if (!path) return null;
-    const old = (p.searchResults ?? p.entries).find((e) => e.path === path);
+    const old = visibleEntries(p).find((e) => e.path === path);
     if (!old || newName === old.name) {
       get().cancelRename(id);
       return null;
@@ -541,15 +637,22 @@ export const useApp = create<AppState>((set, get) => ({
       const updated = await api.rename(path, newName);
       const swap = (list: FileEntry[]) => list.map((e) => (e.path === path ? updated : e));
       const now = get().panes[id];
+      const moved = (x: string) => (x === path || isInside(path, x) ? updated.path + x.slice(path.length) : x);
+      const children = Object.fromEntries(Object.entries(now.children).filter(([dir]) => dir !== path && !isInside(path, dir)).map(([dir, list]) => [dir, swap(list)]));
+      syncWatches(id, now.children, children);
+      const reexpand = Object.keys(children).length < Object.keys(now.children).length;
       get().patchPane(id, {
         entries: swap(now.entries),
         searchResults: now.searchResults ? swap(now.searchResults) : null,
+        expanded: new Set([...now.expanded].map(moved)),
+        children,
         selection: new Set([updated.path]),
         cursor: updated.path,
         anchor: updated.path,
       });
       if (get().favorites.includes(path)) set({ favorites: get().favorites.map((f) => (f === path ? updated.path : f)) });
       get().cancelRename(id);
+      if (reexpand) get().reload(id);
       return null;
     } catch (e) {
       return toFsError(e);

@@ -24,6 +24,7 @@ FindR is a file manager for people who live on the keyboard but still want Finde
 - **Type to search.** Start typing anywhere and the list filters by name. It searches the current folder; the button next to the search field extends it to everything below. Documents, Desktop and Downloads are indexed and kept up to date as files change, so searching them is instant, and folders like `node_modules`, `.git` and `build` are skipped. Both lists can be changed in Settings.
 - **Filter by kind.** One-click chips for folders, images, documents, video, audio, archives and code.
 - **Real previews.** Thumbnails for photos, videos and PDFs, Quick Look on Space, and live updates when files change on disk.
+- **Expandable folders.** Click the triangle beside a folder (or press →) to show its contents in place, and ← to fold it again. Hold ⌥ to expand or collapse every subfolder too.
 - **Sorting like Finder.** Sort by name, date modified, date created, kind or size. Folders stay on top only in name order.
 - **A sidebar that's yours.** Drag folders in to pin them, reorder them, and resize or hide the sidebar (⌘B). Mounted volumes appear on their own.
 
@@ -52,6 +53,7 @@ FindR is built and tested on macOS on Apple Silicon.
 | Search this folder | just start typing, or ⌘F |
 | Open selection | ⌘↓ or double-click |
 | Enclosing folder | ⌘↑ |
+| Expand / collapse folder | → / ← (⌥ for all subfolders) |
 | Back / Forward | ⌘[ / ⌘] |
 | Go to folder… | ⇧⌘G |
 | Quick Look | Space |

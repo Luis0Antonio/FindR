@@ -1,6 +1,7 @@
 import { activePaneState, useApp, type PaneId } from "./state/panes";
 import { focusSearch } from "./components/Toolbar";
 import { copySelection, paste } from "./clipboard";
+import { visibleEntries } from "./state/visible";
 import { closeQuickLook, isQuickLookOpen, toggleQuickLook } from "./quicklook";
 
 function inTextField(target: EventTarget | null): boolean {
@@ -41,7 +42,7 @@ export function handleKeyDown(e: KeyboardEvent) {
   else if (cmd && e.shiftKey && e.code === "KeyN") s.createFolder(id);
   else if (cmd && e.ctrlKey && e.code === "KeyT") {
     const sel = pane.selection.size === 1 ? [...pane.selection][0] : null;
-    const entry = sel ? pane.entries.find((x) => x.path === sel) ?? pane.searchResults?.find((x) => x.path === sel) : null;
+    const entry = sel ? visibleEntries(pane).find((x) => x.path === sel) : null;
     s.addFavorite(entry?.isDir ? entry.path : pane.path);
   } else if (!cmd && e.key === "Enter" && pane.selection.size === 1) s.startRename(id);
   else if (cmd && e.shiftKey && e.code === "Period") s.toggleHidden();
@@ -58,6 +59,7 @@ export function handleKeyDown(e: KeyboardEvent) {
   else if (cmd && !e.shiftKey && e.code === "KeyV") paste(id);
   else if (!cmd && e.key === "ArrowUp") s.moveCursor(id, -1, e.shiftKey);
   else if (!cmd && e.key === "ArrowDown") s.moveCursor(id, 1, e.shiftKey);
+  else if (e.key === "ArrowRight" || e.key === "ArrowLeft") s.disclose(id, e.key === "ArrowRight", e.altKey);
   else if (!cmd && e.key === " ") toggleQuickLook();
   else if (e.key === "Escape" && isQuickLookOpen()) closeQuickLook();
   else if (e.key === "Escape") s.clearSelection(id);

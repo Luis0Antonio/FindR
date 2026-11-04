@@ -12,13 +12,15 @@ interface Props {
   selected: boolean;
   cursor: boolean;
   folderColumn: string | null;
+  depth: number | null;
+  expanded: boolean;
   columns: Column[];
   paneId: PaneId;
   renaming: boolean;
   cut: boolean;
 }
 
-export const FileRow = memo(function FileRow({ entry, top, height, iconSize, selected, cursor, folderColumn, columns, paneId, renaming, cut }: Props) {
+export const FileRow = memo(function FileRow({ entry, top, height, iconSize, selected, cursor, folderColumn, depth, expanded, columns, paneId, renaming, cut }: Props) {
   return (
     <div
       className={`row${selected ? " selected" : ""}${cursor ? " cursor" : ""}${entry.isHidden ? " hidden-entry" : ""}${cut ? " cut" : ""}`}
@@ -26,7 +28,8 @@ export const FileRow = memo(function FileRow({ entry, top, height, iconSize, sel
       data-path={entry.path}
       data-drop-target={entry.isDir ? entry.path : undefined}
     >
-      <div className="cell name">
+      <div className="cell name" style={depth != null ? { paddingLeft: depth * 16 } : undefined}>
+        {depth != null && <span className={`disclosure${entry.isDir ? "" : " none"}${expanded ? " open" : ""}`} />}
         <img className="icon" src={iconUrl(entry.path, iconSize, entry.modified)} width={iconSize} height={iconSize} draggable={false} alt="" />
         {renaming ? <RenameEditor id={paneId} entry={entry} /> : <span className="label">{entry.name}</span>}
       </div>
