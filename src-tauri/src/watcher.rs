@@ -76,3 +76,9 @@ pub fn watch_dir(app: AppHandle, pane_id: String, path: String) {
 pub fn unwatch_dir(pane_id: String) {
     watches().lock().unwrap().remove(&pane_id);
 }
+
+/// Watch keys start with the window's label, so a closed window's watches can be dropped together.
+pub fn unwatch_window(label: &str) {
+    let prefix = format!("{label}:");
+    watches().lock().unwrap().retain(|key, _| !key.starts_with(&prefix));
+}

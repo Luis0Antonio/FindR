@@ -1,6 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import type { FileEntry } from "../api";
+import type { Column, FileEntry } from "../api";
 import { useApp, type PaneId, type PaneState, type SortKey } from "../state/panes";
 import { FileRow } from "./FileRow";
 import { showBackgroundMenu, showRowMenu } from "../contextmenu";
@@ -11,13 +11,29 @@ export function rowHeight(itemSize: number) {
   return Math.max(22, itemSize + 6);
 }
 
-export const COLUMN_INFO: Record<SortKey, { label: string; cls: string; width: string }> = {
-  name: { label: "Name", cls: "name", width: "minmax(120px, 1fr)" },
-  modified: { label: "Date Modified", cls: "date", width: "minmax(0, 170px)" },
-  created: { label: "Date Created", cls: "date", width: "minmax(0, 170px)" },
-  kind: { label: "Kind", cls: "kind", width: "minmax(0, 130px)" },
-  size: { label: "Size", cls: "size", width: "minmax(0, 90px)" },
+export const COLUMN_INFO: Record<SortKey, { label: string; cls: string; width: string; min: number }> = {
+  name: { label: "Name", cls: "name", width: "minmax(120px, 1fr)", min: 180 },
+  modified: { label: "Date Modified", cls: "date", width: "minmax(130px, 170px)", min: 130 },
+  created: { label: "Date Created", cls: "date", width: "minmax(130px, 170px)", min: 130 },
+  kind: { label: "Kind", cls: "kind", width: "minmax(90px, 130px)", min: 90 },
+  size: { label: "Size", cls: "size", width: "minmax(64px, 90px)", min: 64 },
 };
+
+const DROP_ORDER: Column[] = ["created", "kind", "size", "modified"];
+const FOLDER_MIN = 80;
+const ROW_PADDING = 20;
+
+/** Columns that fit beside a readable name, dropping the least useful ones first as the pane narrows. */
+function fitColumns(columns: Column[], width: number, showFolder: boolean): Column[] {
+  if (!width) return columns;
+  let shown = columns;
+  const needed = (cols: Column[]) => ROW_PADDING + COLUMN_INFO.name.min + (showFolder ? FOLDER_MIN : 0) + cols.reduce((sum, c) => sum + COLUMN_INFO[c].min, 0);
+  for (const c of DROP_ORDER) {
+    if (needed(shown) <= width) break;
+    shown = shown.filter((x) => x !== c);
+  }
+  return shown;
+}
 
 function relativeFolder(root: string, path: string): string {
   const dir = path.slice(0, path.lastIndexOf("/")) || "/";
@@ -30,7 +46,14 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
   const scrollRef = useRef<HTMLDivElement>(null);
   const height = rowHeight(pane.itemSize);
   const showFolder = pane.searchResults != null;
-  const columns = useApp((s) => s.columns);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    const observer = new ResizeObserver(([e]) => setWidth(e.contentRect.width));
+    observer.observe(listRef.current!);
+    return () => observer.disconnect();
+  }, []);
+  const columns = fitColumns(useApp((s) => s.columns), width, showFolder);
   const cutPaths = useApp((s) => (s.clipboard?.cut ? s.clipboard.paths : null));
   const grid = [COLUMN_INFO.name.width, ...(showFolder ? ["minmax(60px, 0.7fr)"] : []), ...columns.map((c) => COLUMN_INFO[c].width)].join(" ");
   const virtualizer = useVirtualizer({
@@ -97,7 +120,7 @@ export function FileList({ id, pane, entries }: { id: PaneId; pane: PaneState; e
   );
 
   return (
-    <div className="file-list" style={{ "--columns": grid } as React.CSSProperties}>
+    <div className="file-list" ref={listRef} style={{ "--columns": grid } as React.CSSProperties}>
       <div className="header row">
         {headerCell("name")}
         {showFolder && <div className="cell folder">Folder</div>}

@@ -20,6 +20,7 @@ FindR is a file manager for people who live on the keyboard but still want Finde
 ## Features
 
 **Browsing**
+- **Windows and tabs.** Open as many windows as you like (⌘N), and as many folders as you like in tabs (⌘T), or open a folder in a new tab from its right-click menu. Each tab keeps its own split view, history and search.
 - **Split view.** Two folders side by side (⌘\\), with drag and drop between them. Tab switches panes.
 - **Type to search.** Start typing anywhere and the list filters by name. It searches the current folder; the button next to the search field extends it to everything below. Documents, Desktop and Downloads are indexed and kept up to date as files change, so searching them is instant, and folders like `node_modules`, `.git` and `build` are skipped. Both lists can be changed in Settings.
 - **Filter by kind.** One-click chips for folders, images, documents, video, audio, archives and code.
@@ -65,13 +66,29 @@ FindR is built and tested on macOS on Apple Silicon.
 | Extend selection | ⇧↑ / ⇧↓ |
 | Split view on / off | ⇧⌘S |
 | Open the right pane | ⌘\\ |
-| Close pane | ⌘W |
+| New window | ⌘N |
+| New tab | ⌘T |
+| Next / previous tab | ⇧⌘] / ⇧⌘[ or ⌃Tab / ⌃⇧Tab |
+| Go to tab 1–8 / last tab | ⌘1–⌘8 / ⌘9 |
+| Close pane, or the tab or window when it isn't split | ⌘W |
 | Switch pane | Tab |
 | Toggle sidebar | ⌘B |
 | Add folder to sidebar | ⌃⌘T |
 | Show hidden files | ⇧⌘. |
 | Bigger / smaller rows | ⌘+ / ⌘− |
 | Settings | ⌘, |
+
+## Command line
+
+`cli/findr` opens a folder in FindR from the terminal. Given a file, it opens the folder that holds it with the file selected. Without a path it opens the current folder.
+
+```sh
+ln -s "$PWD/cli/findr" ~/.local/bin/findr   # any folder on your PATH works
+
+findr                  # the current folder
+findr ~/Downloads      # a folder
+findr report.pdf       # the folder holding report.pdf, with it selected
+```
 
 ## Links
 

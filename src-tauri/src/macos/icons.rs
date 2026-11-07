@@ -1,4 +1,4 @@
-use std::sync::mpsc;
+use std::sync::{mpsc, OnceLock};
 use std::time::Duration;
 
 use block2::RcBlock;
@@ -15,11 +15,34 @@ const QL_REPRESENTATION_THUMBNAIL: usize = 1 << 2;
 
 pub fn icon_png(path: &str, px: u32) -> Option<Vec<u8>> {
     autoreleasepool(|_| {
-        let image = NSWorkspace::sharedWorkspace().iconForFile(&NSString::from_str(path));
+        let workspace = NSWorkspace::sharedWorkspace();
+        // The Trash folder's own icon is a blank document; Finder draws it with the system trash can.
+        #[allow(deprecated)]
+        let image = if path.ends_with("/.Trash") {
+            let full = std::fs::read_dir(path).is_ok_and(|mut d| d.any(|e| e.is_ok_and(|e| e.file_name() != ".DS_Store")));
+            workspace.iconForFileType(&NSString::from_str(if full { "'ftrh'" } else { "'trsh'" }))
+        } else {
+            workspace.iconForFile(&NSString::from_str(path))
+        };
         let size = NSSize::new(px as f64, px as f64);
         image.setSize(size);
         image_png(&image, size)
     })
+}
+
+/// Whether the folder is drawn with anything but the plain folder icon, like Downloads or a folder with a custom icon.
+pub fn has_special_icon(path: &str) -> bool {
+    static PLAIN: OnceLock<Option<Vec<u8>>> = OnceLock::new();
+    let plain = PLAIN.get_or_init(|| {
+        autoreleasepool(|_| {
+            #[allow(deprecated)]
+            let image = NSWorkspace::sharedWorkspace().iconForFileType(&NSString::from_str("public.folder"));
+            let size = NSSize::new(32.0, 32.0);
+            image.setSize(size);
+            image_png(&image, size)
+        })
+    });
+    plain.is_some() && icon_png(path, 32) != *plain
 }
 
 /// Content preview from Quick Look, fitted inside a `px` square. `None` if Quick Look has no thumbnail for the file.

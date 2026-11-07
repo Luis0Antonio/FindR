@@ -1,3 +1,4 @@
+import { WINDOW } from "./window";
 import { invoke } from "@tauri-apps/api/core";
 
 export type FileKind = "folder" | "package" | "image" | "document" | "video" | "audio" | "archive" | "code" | "other";
@@ -40,7 +41,16 @@ export interface OpenTarget {
   select: string | null;
 }
 
+export interface TabSettings {
+  splitEnabled: boolean;
+  splitRatio: number;
+  activePane: "left" | "right";
+  panes: Partial<Record<"left" | "right", PaneSettings>>;
+}
+
 export interface Settings {
+  tabs?: TabSettings[];
+  activeTab?: number;
   favorites: string[];
   splitEnabled: boolean;
   splitRatio: number;
@@ -58,6 +68,8 @@ export const api = {
   listDir: (path: string, showHidden: boolean) => invoke<FileEntry[]>("list_dir", { path, showHidden }),
   openPath: (path: string) => invoke<void>("open_path", { path }),
   homeDir: () => invoke<string>("home_dir"),
+  emptyTrash: () => invoke<void>("empty_trash"),
+  hasSpecialIcon: (path: string) => invoke<boolean>("has_special_icon", { path }),
   startupTarget: () => invoke<OpenTarget | null>("startup_target"),
   openPrivacySettings: () => invoke<void>("open_privacy_settings"),
   loadSettings: () => invoke<Settings | null>("load_settings"),
@@ -67,8 +79,10 @@ export const api = {
   cancelSearch: (searchId: string) => invoke<void>("cancel_search", { searchId }),
   configureIndex: (roots: string[], excluded: string[]) => invoke<void>("configure_index", { roots, excluded }),
   indexStatus: () => invoke<{ building: boolean; items: number }>("index_status"),
-  watchDir: (paneId: string, path: string) => invoke<void>("watch_dir", { paneId, path }),
-  unwatchDir: (paneId: string) => invoke<void>("unwatch_dir", { paneId }),
+  watchDir: (key: string, path: string) => invoke<void>("watch_dir", { paneId: `${WINDOW}:${key}`, path }),
+  unwatchDir: (key: string) => invoke<void>("unwatch_dir", { paneId: `${WINDOW}:${key}` }),
+  newWindow: () => invoke<void>("new_window"),
+  closeWindow: () => invoke<void>("close_window"),
   createFolder: (parent: string) => invoke<FileEntry>("create_folder", { parent }),
   rename: (path: string, newName: string) => invoke<FileEntry>("rename", { path, newName }),
   listVolumes: () => invoke<Volume[]>("list_volumes"),

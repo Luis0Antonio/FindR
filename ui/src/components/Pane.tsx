@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { api } from "../api";
-import { useApp, type PaneId } from "../state/panes";
+import { trashPath, useApp, type PaneId } from "../state/panes";
 import { visibleEntries } from "../state/visible";
 import { FileList } from "./FileList";
 import { Breadcrumb, Toolbar } from "./Toolbar";
@@ -14,6 +14,12 @@ export function Pane({ id, grow }: { id: PaneId; grow: number }) {
   return (
     <section className={`pane${!active && split ? " inactive" : ""}`} style={{ flexGrow: grow }} onPointerDownCapture={() => useApp.getState().setActive(id)}>
       <Toolbar id={id} />
+      {pane.path === trashPath() && (
+        <div className="trash-bar">
+          <span>Trash</span>
+          <button onClick={() => useApp.setState({ confirmEmptyTrash: true })}>Empty Trash</button>
+        </div>
+      )}
       {pane.error ? (
         <div className="pane-message">
           {pane.error.code === "permission_denied" ? (

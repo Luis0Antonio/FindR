@@ -8,8 +8,18 @@ mod search;
 mod settings;
 mod watcher;
 
+use std::sync::Mutex;
+
 use tauri::menu::{Menu, MenuItem, MenuItemKind, PredefinedMenuItem};
-use tauri::Emitter;
+use tauri::{AppHandle, Emitter, EventTarget, Manager, WebviewWindow, WindowEvent};
+
+static LAST_FOCUSED: Mutex<String> = Mutex::new(String::new());
+
+/// The window the user last worked in, which receives menu commands and opened links.
+pub fn focused_window(app: &AppHandle) -> Option<WebviewWindow> {
+    let label = LAST_FOCUSED.lock().unwrap().clone();
+    app.get_webview_window(&label).or_else(|| app.get_webview_window("main")).or_else(|| app.webview_windows().into_values().next())
+}
 
 pub fn run() {
     tauri::Builder::default()
@@ -26,8 +36,15 @@ pub fn run() {
         })
         .on_menu_event(|app, event| {
             if event.id() == "settings" {
-                let _ = app.emit("menu://settings", ());
+                if let Some(window) = focused_window(app) {
+                    let _ = app.emit_to(EventTarget::webview_window(window.label()), "menu://settings", ());
+                }
             }
+        })
+        .on_window_event(|window, event| match event {
+            WindowEvent::Focused(true) => *LAST_FOCUSED.lock().unwrap() = window.label().to_string(),
+            WindowEvent::Destroyed => watcher::unwatch_window(window.label()),
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             commands::list_dir,
@@ -41,6 +58,10 @@ pub fn run() {
             commands::paths_exist,
             commands::move_items,
             commands::volume_of,
+            commands::has_special_icon,
+            commands::empty_trash,
+            commands::new_window,
+            commands::close_window,
             commands::reveal_in_finder,
             commands::drag_out,
             commands::convert_file,

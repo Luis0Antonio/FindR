@@ -1,6 +1,6 @@
-import { api, iconUrl, type FileEntry } from "./api";
+import { api, iconUrl, toFsError, type FileEntry } from "./api";
 import { baseName, parentOf } from "./format";
-import { useApp, type PaneId } from "./state/panes";
+import { trashPath, useApp, type PaneId } from "./state/panes";
 import { visibleEntries } from "./state/visible";
 import { transfer } from "./transfer";
 
@@ -223,6 +223,8 @@ export function beginDrag(ev: React.PointerEvent, makeSource: () => Source | nul
       useApp.getState().moveFavorite(src.path, drop.index);
     } else if (src.kind === "items" && drop.kind === "add") {
       for (const e of src.entries) if (e.isDir) useApp.getState().addFavorite(e.path);
+    } else if (src.kind === "items" && drop.kind === "folder" && drop.path === trashPath()) {
+      api.moveToTrash(src.entries.map((x) => x.path)).catch((err) => useApp.setState({ notice: toFsError(err).message }));
     } else if (src.kind === "items" && drop.kind === "folder") {
       transfer(
         src.entries.map((x) => x.path),

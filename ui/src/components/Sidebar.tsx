@@ -3,7 +3,7 @@ import { showFavoriteMenu } from "../contextmenu";
 import { beginDrag, favoriteSource } from "../dnd";
 import { baseName } from "../format";
 import { useState } from "react";
-import { useApp } from "../state/panes";
+import { trashPath, useApp } from "../state/panes";
 
 export function Sidebar() {
   const favorites = useApp((s) => s.favorites);
@@ -11,6 +11,7 @@ export function Sidebar() {
   const volumes = useApp((s) => s.volumes);
   const current = useApp((s) => s.panes[s.activePane].path);
   const width = useApp((s) => s.sidebarWidth);
+  const trash = trashPath();
   const go = (path: string) => {
     const s = useApp.getState();
     if (s.missingFavorites.has(path)) showFavoriteMenu(path);
@@ -20,6 +21,7 @@ export function Sidebar() {
     <aside className="sidebar" style={{ width }}>
       <div className="sidebar-top" data-tauri-drag-region />
       <div className="sidebar-scroll">
+        <Place path="/Applications" label="Applications" current={current} />
         <div className="sidebar-section">Favorites</div>
         {favorites.map((path) => (
           <div
@@ -55,8 +57,24 @@ export function Sidebar() {
             <span className="label">{v.name}</span>
           </div>
         ))}
+        <div className="sidebar-gap" />
+        <Place path={trash} label="Trash" current={current} />
       </div>
     </aside>
+  );
+}
+
+function Place({ path, label, current }: { path: string; label: string; current: string }) {
+  return (
+    <div
+      className={`sidebar-item${current === path ? " current" : ""}`}
+      title={path}
+      data-drop-target={path}
+      onClick={() => useApp.getState().navigate(useApp.getState().activePane, path)}
+    >
+      <img className="icon" src={iconUrl(path, 16)} width={16} height={16} draggable={false} alt="" />
+      <span className="label">{label}</span>
+    </div>
   );
 }
 

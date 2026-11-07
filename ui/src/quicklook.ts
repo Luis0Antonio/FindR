@@ -49,6 +49,7 @@ export function startQuickLookSync() {
     invoke("quicklook_update", items);
   });
   listen<{ delta: number }>("quicklook://navigate", (e) => {
+    if (!open) return;
     const s = useApp.getState();
     s.moveCursor(s.activePane, e.payload.delta, false);
   });

@@ -3,7 +3,7 @@ use std::sync::Mutex;
 
 use percent_encoding::percent_decode_str;
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, State, Url};
+use tauri::{AppHandle, Emitter, EventTarget, Manager, State, Url};
 
 #[derive(Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -31,8 +31,8 @@ pub fn handle_opened(app: &AppHandle, urls: &[Url]) {
         links.pending = Some(target);
         return;
     }
-    let _ = app.emit("link://open", target);
-    if let Some(window) = app.get_webview_window("main") {
+    if let Some(window) = crate::focused_window(app) {
+        let _ = app.emit_to(EventTarget::webview_window(window.label()), "link://open", target);
         let _ = window.unminimize();
         let _ = window.set_focus();
     }

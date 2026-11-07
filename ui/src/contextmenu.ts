@@ -28,6 +28,7 @@ export function showRowMenu(id: PaneId, entry: FileEntry) {
   popup([
     { text: "Open", action: () => s.openEntries(id, selected) },
     { text: "Quick Look", action: () => !isQuickLookOpen() && toggleQuickLook() },
+    ...(single && entry.isDir ? [{ text: "Open in New Tab", action: () => s.newTab(entry.path) }] : []),
     "-",
     { text: "Rename", enabled: single, action: () => s.startRename(id, entry.path) },
     { text: "Add to Sidebar", enabled: single && entry.isDir, action: () => s.addFavorite(entry.path) },
@@ -55,6 +56,7 @@ export function showFavoriteMenu(path: string) {
   const s = useApp.getState();
   popup([
     { text: "Open", enabled: !s.missingFavorites.has(path), action: () => s.navigate(s.activePane, path) },
+    { text: "Open in New Tab", enabled: !s.missingFavorites.has(path), action: () => s.newTab(path) },
     { text: "Show in Finder", enabled: !s.missingFavorites.has(path), action: () => api.revealInFinder([path]) },
     "-",
     { text: "Remove from Sidebar", action: () => s.removeFavorite(path) },

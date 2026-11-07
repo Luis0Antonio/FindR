@@ -1,0 +1,25 @@
+#!/bin/sh
+# Opens a folder in FindR, or the folder holding a file with the file selected.
+set -e
+
+case "$1" in
+  -h | --help)
+    echo "usage: findr [path]"
+    echo "Opens the folder in FindR, or the folder that holds the file with the file selected."
+    echo "Without a path it opens the current folder."
+    exit 0
+    ;;
+esac
+
+if [ $# -gt 1 ]; then
+  echo "findr: takes one path" >&2
+  exit 64
+fi
+
+target=${1:-.}
+if [ ! -e "$target" ]; then
+  echo "findr: $target: No such file or directory" >&2
+  exit 1
+fi
+
+exec open -b dev.softblocks.findr "$target"

@@ -84,6 +84,7 @@ const PROGRESS_THRESHOLD: u64 = 50 * 1000 * 1000;
 #[tauri::command]
 pub async fn move_items(
     app: AppHandle,
+    window: tauri::WebviewWindow,
     sources: Vec<String>,
     target_dir: String,
     copy: bool,
@@ -92,6 +93,7 @@ pub async fn move_items(
 ) -> FsResult<fs_core::ops::OpResult> {
     use fs_core::ops::{device_of, move_items, total_size, Progress};
     use tauri::Emitter;
+    let label = window.label().to_string();
     blocking(move || {
         let target = PathBuf::from(&target_dir);
         let target_dev = device_of(&target).ok();
@@ -101,7 +103,8 @@ pub async fn move_items(
         let mut report = |done: u64, total: u64| {
             if done == total || last.elapsed() >= std::time::Duration::from_millis(100) {
                 last = std::time::Instant::now();
-                let _ = app.emit(
+                let _ = app.emit_to(
+                    tauri::EventTarget::webview_window(&label),
                     "op://progress",
                     serde_json::json!({ "opId": op_id, "doneBytes": done, "totalBytes": total }),
                 );
@@ -111,6 +114,52 @@ pub async fn move_items(
         Ok(move_items(&sources, &target, copy, policy, progress))
     })
     .await
+}
+
+#[tauri::command]
+pub async fn new_window(app: AppHandle) -> FsResult<()> {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    static NEXT: AtomicUsize = AtomicUsize::new(1);
+    let io = |e: tauri::Error| FsError::Io(e.to_string());
+    let mut config = app.config().app.windows.iter().find(|w| w.label == "main").cloned().ok_or_else(|| FsError::Io("no window config".into()))?;
+    config.label = format!("window-{}", NEXT.fetch_add(1, Ordering::SeqCst));
+    let mut builder = tauri::WebviewWindowBuilder::from_config(&app, &config).map_err(io)?;
+    if let Some(from) = crate::focused_window(&app) {
+        if let (Ok(pos), Ok(scale)) = (from.outer_position(), from.scale_factor()) {
+            let pos = pos.to_logical::<f64>(scale);
+            builder = builder.position(pos.x + 28.0, pos.y + 28.0);
+        }
+    }
+    builder.build().map_err(io)?;
+    Ok(())
+}
+
+/// Closes the window unless it is the last one, which would quit the app.
+#[tauri::command]
+pub fn close_window(app: AppHandle, window: tauri::WebviewWindow) -> FsResult<()> {
+    use tauri::Manager;
+    if app.webview_windows().len() > 1 {
+        window.close().map_err(|e| FsError::Io(e.to_string()))?;
+    }
+    Ok(())
+}
+
+/// Finder empties the Trash on every volume and doesn't need FindR to have Full Disk Access.
+#[tauri::command]
+pub async fn empty_trash() -> FsResult<()> {
+    let out = std::process::Command::new("osascript")
+        .args(["-e", "tell application \"Finder\" to empty trash"])
+        .output()
+        .map_err(|e| FsError::Io(e.to_string()))?;
+    if out.status.success() {
+        return Ok(());
+    }
+    Err(FsError::Io(String::from_utf8_lossy(&out.stderr).trim().to_string()))
+}
+
+#[tauri::command]
+pub fn has_special_icon(path: String) -> bool {
+    crate::macos::icons::has_special_icon(&path)
 }
 
 #[tauri::command]

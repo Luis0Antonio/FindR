@@ -3,12 +3,15 @@ import { startSettingsPersistence, useApp } from "./state/panes";
 import { Pane } from "./components/Pane";
 import { Sidebar, SidebarResizer } from "./components/Sidebar";
 import { Divider } from "./components/Divider";
+import { TabBar } from "./components/TabBar";
 import { GoToFolder } from "./components/GoToFolder";
 import { ConflictDialog } from "./components/ConflictDialog";
+import { EmptyTrashDialog } from "./components/EmptyTrashDialog";
 import { Settings } from "./components/Settings";
 import { handleKeyDown } from "./keyboard";
 import { startQuickLookSync } from "./quicklook";
 import { listen } from "@tauri-apps/api/event";
+import { currentWindow } from "./window";
 import type { DirChanged, OpenTarget, OpProgress, SearchBatch } from "./api";
 
 export function App() {
@@ -20,6 +23,7 @@ export function App() {
   const ratio = useApp((s) => s.splitRatio);
   const sidebarHidden = useApp((s) => s.sidebarHidden);
   const settingsOpen = useApp((s) => s.settingsOpen);
+  const tabbed = useApp((s) => s.tabs.length > 1);
   useEffect(() => {
     useApp.getState().init().then(() => {
       startSettingsPersistence();
@@ -34,15 +38,15 @@ export function App() {
     const unlisten = [
       listen<SearchBatch>("search://results", (e) => useApp.getState().onSearchBatch(e.payload)),
       listen<DirChanged>("dir://changed", (e) => useApp.getState().onDirChanged(e.payload.path)),
-      listen("menu://settings", () => {
+      currentWindow.listen("menu://settings", () => {
         const s = useApp.getState();
         s.setSettingsOpen(!s.settingsOpen);
       }),
-      listen<OpenTarget>("link://open", (e) => {
+      currentWindow.listen<OpenTarget>("link://open", (e) => {
         const s = useApp.getState();
         s.navigate(s.activePane, e.payload.path, { select: e.payload.select ?? undefined });
       }),
-      listen<OpProgress>("op://progress", (e) =>
+      currentWindow.listen<OpProgress>("op://progress", (e) =>
         useApp.setState({ progress: e.payload.doneBytes >= e.payload.totalBytes ? null : { done: e.payload.doneBytes, total: e.payload.totalBytes } }),
       ),
     ];
@@ -54,25 +58,29 @@ export function App() {
   }, []);
   if (!ready) return null;
   return (
-    <div className={`app${sidebarHidden ? " sidebar-hidden" : ""}`}>
+    <div className={`app${sidebarHidden ? " sidebar-hidden" : ""}${tabbed ? " tabbed" : ""}`}>
       {!sidebarHidden && (
         <>
           <Sidebar />
           <SidebarResizer />
         </>
       )}
-      <main className="panes">
-        <Pane id="left" grow={split ? ratio : 1} />
-        {split && (
-          <>
-            <Divider />
-            <Pane id="right" grow={1 - ratio} />
-          </>
-        )}
-      </main>
+      <div className="content">
+        {tabbed && <TabBar />}
+        <main className="panes">
+          <Pane id="left" grow={split ? ratio : 1} />
+          {split && (
+            <>
+              <Divider />
+              <Pane id="right" grow={1 - ratio} />
+            </>
+          )}
+        </main>
+      </div>
       {goToOpen && <GoToFolder />}
       {settingsOpen && <Settings />}
       <ConflictDialog />
+      <EmptyTrashDialog />
       {activity && !notice && (
         <div className="notice activity" role="status">
           <span>{activity}</span>

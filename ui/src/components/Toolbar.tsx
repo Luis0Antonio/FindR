@@ -1,6 +1,5 @@
 import type { FileKind } from "../api";
-import { useApp, type PaneId } from "../state/panes";
-import { baseName } from "../format";
+import { displayName, useApp, type PaneId } from "../state/panes";
 
 const CHIPS: { kind: FileKind; label: string }[] = [
   { kind: "folder", label: "Folders" },
@@ -17,9 +16,9 @@ export function Breadcrumb({ id, path }: { id: PaneId; path: string }) {
   const navigate = useApp((s) => s.navigate);
   const parts = path.split("/").filter(Boolean);
   const crumbs = [
-    { label: baseName("/"), path: "/" },
+    { label: displayName("/"), path: "/" },
     ...parts.map((p, i) => ({
-      label: p,
+      label: displayName("/" + parts.slice(0, i + 1).join("/")),
       path: "/" + parts.slice(0, i + 1).join("/"),
     })),
   ];
@@ -63,7 +62,7 @@ export function Toolbar({ id }: { id: PaneId }) {
           </button>
         </div>
         <div className="title" data-tauri-drag-region title={pane.path}>
-          {baseName(pane.path)}
+          {displayName(pane.path)}
         </div>
         <div className="capsule">
           <button className="tb" title="New Folder (⇧⌘N)" onClick={() => s.createFolder(id)}>

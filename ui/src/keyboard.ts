@@ -1,4 +1,5 @@
 import { activePaneState, useApp, type PaneId } from "./state/panes";
+import { api } from "./api";
 import { focusSearch } from "./components/Toolbar";
 import { copySelection, paste } from "./clipboard";
 import { visibleEntries } from "./state/visible";
@@ -17,6 +18,10 @@ function typeIntoSearch(id: PaneId, text: string) {
 }
 
 export function handleKeyDown(e: KeyboardEvent) {
+  if (useApp.getState().confirmEmptyTrash) {
+    if (e.key === "Escape") useApp.setState({ confirmEmptyTrash: false });
+    return;
+  }
   if (useApp.getState().settingsOpen) {
     if (e.key === "Escape") useApp.getState().setSettingsOpen(false);
     return;
@@ -32,9 +37,21 @@ export function handleKeyDown(e: KeyboardEvent) {
   const cmd = e.metaKey;
   let handled = true;
 
+  const digit = /^Digit[1-9]$/.test(e.code) ? Number(e.code.slice(5)) : 0;
+  const stepTab = (delta: number) => s.selectTab((s.activeTab + delta + s.tabs.length) % s.tabs.length);
+
   if (cmd && e.shiftKey && e.code === "KeyS") s.toggleSplit();
+  else if (cmd && !e.ctrlKey && !e.shiftKey && e.code === "KeyT") s.newTab();
+  else if (cmd && !e.shiftKey && e.code === "KeyN") api.newWindow();
+  else if (cmd && !e.shiftKey && digit) s.selectTab(digit === 9 ? s.tabs.length - 1 : digit - 1);
+  else if ((cmd && e.shiftKey && e.code === "BracketLeft") || (e.ctrlKey && e.shiftKey && e.key === "Tab")) stepTab(-1);
+  else if ((cmd && e.shiftKey && e.code === "BracketRight") || (e.ctrlKey && e.key === "Tab")) stepTab(1);
   else if (cmd && e.code === "Backslash") s.openRightPane();
-  else if (cmd && e.code === "KeyW") s.closePane(id);
+  else if (cmd && e.code === "KeyW") {
+    if (s.splitEnabled) s.closePane(id);
+    else if (s.tabs.length > 1) s.closeTab(s.activeTab);
+    else api.closeWindow();
+  }
   else if (cmd && e.key === "Backspace") s.trashSelection(id);
   else if (e.key === "Tab" && !cmd) {
     if (s.splitEnabled) s.setActive(id === "left" ? "right" : "left");

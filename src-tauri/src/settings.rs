@@ -18,7 +18,20 @@ pub struct PaneSettings {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct TabSettings {
+    pub split_enabled: bool,
+    pub split_ratio: f64,
+    pub active_pane: String,
+    pub panes: HashMap<String, PaneSettings>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Settings {
+    #[serde(default)]
+    pub tabs: Option<Vec<TabSettings>>,
+    #[serde(default)]
+    pub active_tab: Option<usize>,
     pub favorites: Vec<String>,
     pub split_enabled: bool,
     pub split_ratio: f64,

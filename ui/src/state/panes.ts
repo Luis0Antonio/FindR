@@ -1,6 +1,21 @@
 import { create } from "zustand";
-import { api, toFsError, type Column, type ConflictPolicy, type FileEntry, type FileKind, type FsError, type SearchBatch, type Settings, type Volume } from "../api";
-import { parentOf } from "../format";
+import { emit, listen } from "@tauri-apps/api/event";
+import {
+  api,
+  toFsError,
+  type Column,
+  type ConflictPolicy,
+  type FileEntry,
+  type FileKind,
+  type FsError,
+  type PaneSettings,
+  type SearchBatch,
+  type Settings,
+  type TabSettings,
+  type Volume,
+} from "../api";
+import { baseName, parentOf } from "../format";
+import { currentWindow, isMainWindow, WINDOW } from "../window";
 import { visibleEntries } from "./visible";
 
 export type PaneId = "left" | "right";
@@ -89,7 +104,17 @@ export function newPane(path: string): PaneState {
   };
 }
 
+export interface Tab {
+  panes: Record<PaneId, PaneState>;
+  splitEnabled: boolean;
+  splitRatio: number;
+  activePane: PaneId;
+}
+
 interface AppState {
+  /** The active tab's entry is stale; its live state is `panes`, `splitEnabled`, `splitRatio` and `activePane`. */
+  tabs: Tab[];
+  activeTab: number;
   panes: Record<PaneId, PaneState>;
   splitEnabled: boolean;
   splitRatio: number;
@@ -110,6 +135,7 @@ interface AppState {
   volumes: Volume[];
   missingFavorites: Set<string>;
   conflictPrompt: ConflictPrompt | null;
+  confirmEmptyTrash: boolean;
   notice: string | null;
   /** What FindR last put on the system clipboard; `changeCount` tells whether it is still there. */
   clipboard: { paths: string[]; cut: boolean; changeCount: number } | null;
@@ -119,6 +145,9 @@ interface AppState {
   init: () => Promise<void>;
   patchPane: (id: PaneId, patch: Partial<PaneState>) => void;
   setActive: (id: PaneId) => void;
+  newTab: (path?: string) => void;
+  selectTab: (index: number) => void;
+  closeTab: (index: number) => void;
   toggleSplit: () => void;
   openRightPane: () => void;
   closePane: (id: PaneId) => void;
@@ -214,7 +243,25 @@ async function fetchTree(start: string[], expanded: Set<string>, showHidden: boo
 
 const isInside = (dir: string, path: string) => path.startsWith(dir === "/" ? "/" : dir + "/");
 
+const liveTab = (s: Pick<AppState, "panes" | "splitEnabled" | "splitRatio" | "activePane">): Tab => ({
+  panes: s.panes,
+  splitEnabled: s.splitEnabled,
+  splitRatio: s.splitRatio,
+  activePane: s.activePane,
+});
+
+export const currentTabs = (s: AppState) => s.tabs.map((t, i) => (i === s.activeTab ? liveTab(s) : t));
+
+const visiblePanes = (t: Tab): PaneId[] => (t.splitEnabled ? ["left", "right"] : ["left"]);
+
+function freshTab(path: string, like: PaneState): Tab {
+  const pane = { ...newPane(path), sortKey: like.sortKey, sortDir: like.sortDir, foldersFirst: like.foldersFirst, itemSize: like.itemSize };
+  return { panes: { left: pane, right: { ...pane } }, splitEnabled: false, splitRatio: 0.5, activePane: "left" };
+}
+
 export const useApp = create<AppState>((set, get) => ({
+  tabs: [],
+  activeTab: 0,
   panes: { left: newPane("/"), right: newPane("/") },
   splitEnabled: false,
   splitRatio: 0.5,
@@ -234,25 +281,36 @@ export const useApp = create<AppState>((set, get) => ({
   volumes: [],
   missingFavorites: new Set(),
   conflictPrompt: null,
+  confirmEmptyTrash: false,
   notice: null,
   clipboard: null,
   activity: null,
   progress: null,
 
   init: async () => {
-    const [home, startup, saved] = await Promise.all([api.homeDir(), api.startupTarget(), api.loadSettings().catch(() => null)]);
-    const pane = (id: PaneId): PaneState => {
-      const ps = saved?.panes[id];
+    const [home, startup, saved] = await Promise.all([api.homeDir(), isMainWindow ? api.startupTarget() : null, api.loadSettings().catch(() => null)]);
+    const pane = (ps: PaneSettings | undefined): PaneState => {
       const p = newPane(ps?.path ?? home);
       if (ps) Object.assign(p, { sortKey: ps.sortKey, sortDir: ps.sortDir, foldersFirst: ps.foldersFirst, itemSize: ps.itemSize });
       return p;
     };
-    const panes = { left: pane("left"), right: pane("right") };
+    const savedTabs: TabSettings[] = !isMainWindow
+      ? [{ panes: { left: saved?.panes?.left && { ...saved.panes.left, path: home } }, splitEnabled: false, splitRatio: 0.5, activePane: "left" }]
+      : saved?.tabs?.length
+      ? saved.tabs
+      : [{ panes: saved?.panes ?? {}, splitEnabled: saved?.splitEnabled ?? false, splitRatio: saved?.splitRatio ?? 0.5, activePane: "left" }];
+    const tabs: Tab[] = savedTabs.map((t) => ({
+      panes: { left: pane(t.panes.left), right: pane(t.panes.right) },
+      splitEnabled: t.splitEnabled,
+      splitRatio: t.splitRatio,
+      activePane: t.splitEnabled && t.activePane === "right" ? "right" : "left",
+    }));
+    const activeTab = Math.min(saved?.activeTab ?? 0, tabs.length - 1);
     set({
       home,
-      panes,
-      splitEnabled: saved?.splitEnabled ?? false,
-      splitRatio: saved?.splitRatio ?? 0.5,
+      tabs,
+      activeTab,
+      ...tabs[activeTab],
       showHidden: saved?.showHidden ?? false,
       sidebarHidden: saved?.sidebarHidden ?? false,
       sidebarWidth: saved?.sidebarWidth ?? 200,
@@ -263,9 +321,10 @@ export const useApp = create<AppState>((set, get) => ({
       favorites: saved?.favorites ?? [home, `${home}/Desktop`, `${home}/Documents`, `${home}/Downloads`],
       ready: true,
     });
+    const first = get().activePane;
     await Promise.all([
-      startup ? get().navigate("left", startup.path, { select: startup.select ?? undefined }) : get().reload("left"),
-      get().splitEnabled ? get().reload("right") : null,
+      startup ? get().navigate(first, startup.path, { select: startup.select ?? undefined }) : get().reload(first),
+      get().splitEnabled ? get().reload(first === "left" ? "right" : "left") : null,
     ]);
     get().refreshFavorites();
     get().loadVolumes();
@@ -277,6 +336,41 @@ export const useApp = create<AppState>((set, get) => ({
 
   setActive: (id) => {
     if (get().activePane !== id) set({ activePane: id });
+  },
+
+  newTab: (path) => {
+    const s = get();
+    detachLive();
+    const tabs = currentTabs(get());
+    const like = s.panes[s.activePane];
+    const tab = freshTab(path ?? like.path, like);
+    const activeTab = s.activeTab + 1;
+    tabs.splice(activeTab, 0, tab);
+    set({ tabs, activeTab, ...tab });
+    get().reload("left");
+  },
+
+  selectTab: (index) => {
+    const s = get();
+    if (index === s.activeTab || index < 0 || index >= s.tabs.length) return;
+    detachLive();
+    const tabs = currentTabs(get());
+    set({ tabs, activeTab: index, ...tabs[index] });
+    attachLive();
+  },
+
+  closeTab: (index) => {
+    const s = get();
+    if (s.tabs.length < 2 || index < 0 || index >= s.tabs.length) return;
+    if (index !== s.activeTab) {
+      set({ tabs: s.tabs.filter((_, i) => i !== index), activeTab: s.activeTab - (index < s.activeTab ? 1 : 0) });
+      return;
+    }
+    detachLive();
+    const tabs = s.tabs.filter((_, i) => i !== index);
+    const activeTab = Math.min(index, tabs.length - 1);
+    set({ tabs, activeTab, ...tabs[activeTab] });
+    attachLive();
   },
 
   toggleSplit: () => {
@@ -571,7 +665,7 @@ export const useApp = create<AppState>((set, get) => ({
       get().patchPane(id, { searchResults: null, searchId: null, searchDone: true, searchTruncated: false });
       return;
     }
-    const searchId = `${id}-${++searchCounter}`;
+    const searchId = `${WINDOW}-${id}-${++searchCounter}`;
     get().patchPane(id, { searchResults: [], searchId, searchDone: false, searchTruncated: false });
     await api.startSearch(searchId, p.path, query, [...p.kindFilter], get().showHidden);
   },
@@ -720,6 +814,32 @@ export const useApp = create<AppState>((set, get) => ({
   loadVolumes: async () => set({ volumes: await api.listVolumes() }),
 }));
 
+/** Watches, searches and pending renames are keyed by pane id, so only the active tab may hold them. */
+function detachLive() {
+  const s = useApp.getState();
+  for (const id of visiblePanes(liveTab(s))) {
+    s.stopSearch(id);
+    syncWatches(id, s.panes[id].children, {});
+    api.unwatchDir(id);
+    refreshAfterRename[id] = false;
+    s.patchPane(id, { renaming: null });
+  }
+}
+
+/** A background tab missed every change on disk, so it is reloaded as it comes forward. */
+function attachLive() {
+  const s = useApp.getState();
+  for (const id of visiblePanes(liveTab(s))) {
+    syncWatches(id, {}, s.panes[id].children);
+    s.reload(id);
+    if (s.panes[id].recursive && s.panes[id].nameFilter.trim()) s.runSearch(id);
+  }
+}
+
+export const trashPath = () => `${useApp.getState().home}/.Trash`;
+
+export const displayName = (path: string) => (path === trashPath() ? "Trash" : baseName(path));
+
 export function activePaneState() {
   const s = useApp.getState();
   return { id: s.activePane, pane: s.panes[s.activePane] };
@@ -727,36 +847,75 @@ export function activePaneState() {
 
 let saveTimer: number | undefined;
 let lastSaved = "";
+let lastShared = "";
 
-export function startSettingsPersistence() {
-  useApp.subscribe((s) => {
-    if (!s.ready) return;
-    const pane = (p: PaneState) => ({
-      path: p.path,
-      sortKey: p.sortKey,
-      sortDir: p.sortDir,
-      foldersFirst: p.foldersFirst,
-      itemSize: p.itemSize,
-    });
-    const settings: Settings = {
-      favorites: s.favorites,
-      splitEnabled: s.splitEnabled,
-      splitRatio: s.splitRatio,
-      showHidden: s.showHidden,
-      sidebarHidden: s.sidebarHidden,
-      sidebarWidth: s.sidebarWidth,
-      columns: s.columns,
-      keepConvertedOriginals: s.keepConvertedOriginals,
-      indexRoots: s.indexRoots,
-      excludedFolders: s.excludedFolders,
-      panes: { left: pane(s.panes.left), right: pane(s.panes.right) },
-    };
+/** Preferences every window shares; the window layout and its tabs belong to each window. */
+const sharedPrefs = (s: AppState) => ({
+  favorites: s.favorites,
+  showHidden: s.showHidden,
+  columns: s.columns,
+  keepConvertedOriginals: s.keepConvertedOriginals,
+  indexRoots: s.indexRoots,
+  excludedFolders: s.excludedFolders,
+});
+type SharedPrefs = ReturnType<typeof sharedPrefs>;
+
+function settingsOf(s: AppState): Settings {
+  const pane = (p: PaneState) => ({
+    path: p.path,
+    sortKey: p.sortKey,
+    sortDir: p.sortDir,
+    foldersFirst: p.foldersFirst,
+    itemSize: p.itemSize,
+  });
+  return {
+    ...sharedPrefs(s),
+    tabs: currentTabs(s).map((t) => ({ splitEnabled: t.splitEnabled, splitRatio: t.splitRatio, activePane: t.activePane, panes: { left: pane(t.panes.left), right: pane(t.panes.right) } })),
+    activeTab: s.activeTab,
+    splitEnabled: s.splitEnabled,
+    splitRatio: s.splitRatio,
+    sidebarHidden: s.sidebarHidden,
+    sidebarWidth: s.sidebarWidth,
+    panes: { left: pane(s.panes.left), right: pane(s.panes.right) },
+  };
+}
+
+/** Only the window in front saves, so the next launch reopens the window the user last worked in. */
+function scheduleSave() {
+  if (!document.hasFocus()) return;
+  window.clearTimeout(saveTimer);
+  saveTimer = window.setTimeout(() => {
+    const settings = settingsOf(useApp.getState());
     const text = JSON.stringify(settings);
     if (text === lastSaved) return;
-    window.clearTimeout(saveTimer);
-    saveTimer = window.setTimeout(() => {
-      lastSaved = text;
-      api.saveSettings(settings);
-    }, 300);
+    lastSaved = text;
+    api.saveSettings(settings);
+  }, 300);
+}
+
+export function startSettingsPersistence() {
+  lastShared = JSON.stringify(sharedPrefs(useApp.getState()));
+  listen<{ from: string; prefs: SharedPrefs }>("prefs://changed", ({ payload }) => {
+    if (payload.from === WINDOW) return;
+    lastShared = JSON.stringify(payload.prefs);
+    const s = useApp.getState();
+    const hiddenChanged = s.showHidden !== payload.prefs.showHidden;
+    useApp.setState(payload.prefs);
+    s.refreshFavorites();
+    if (!hiddenChanged) return;
+    for (const id of visiblePanes(liveTab(s))) {
+      s.reload(id);
+      if (s.panes[id].recursive) s.runSearch(id);
+    }
+  });
+  currentWindow.onFocusChanged(({ payload: focused }) => focused && scheduleSave());
+  useApp.subscribe((s) => {
+    if (!s.ready) return;
+    const shared = JSON.stringify(sharedPrefs(s));
+    if (shared !== lastShared) {
+      lastShared = shared;
+      emit("prefs://changed", { from: WINDOW, prefs: sharedPrefs(s) });
+    }
+    scheduleSave();
   });
 }
